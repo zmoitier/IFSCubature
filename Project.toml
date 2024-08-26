@@ -3,5 +3,17 @@ uuid = "9e96415c-954e-44bc-b66e-d49729290fe4"
 authors = ["Zoïs Moitier <zois.moitier@ensta-paris.fr>"]
 version = "1.0.0-DEV"
 
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
+IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
+IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
+Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+
 [compat]
 julia = "1.6.7"
