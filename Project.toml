@@ -1,0 +1,7 @@
+name = "IFSCubature"
+uuid = "9e96415c-954e-44bc-b66e-d49729290fe4"
+authors = ["Zoïs Moitier <zois.moitier@ensta-paris.fr>"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.6.7"
