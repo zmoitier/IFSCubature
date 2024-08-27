@@ -3,21 +3,21 @@ struct HyperBall{D,T}
     radius::T
 end
 
-function HyperBall(center::Vector{<:Real}, radius::Real)
+function hyper_ball(center::AbstractVector{T}, radius::T) where {T}
     @assert radius > 0 "radius=$radius > 0."
 
     D = length(center)
-    T = typeof(radius)
-
     return HyperBall{D,T}(SVector{D,T}(center), radius)
 end
 
-function HyperBall(center::Real, radius::Real)
+function hyper_ball(center::T, radius::T) where {T}
     @assert radius ≥ 0 "paxis must be non-negative."
 
-    T = typeof(radius)
-
     return HyperBall{1,T}(SVector{1,T}(center), radius)
+end
+
+function (f::AffineMap{D,T,N})(hb::HyperBall{D,T}) where {D,T,N}
+    return HyperBall{D,T}(f(hb.center), hb.radius * f.ρ)
 end
 
 struct HyperBox{D,T,N}
@@ -25,23 +25,29 @@ struct HyperBox{D,T,N}
     paxis::SMatrix{D,D,T,N}
 end
 
-function HyperBox(center::Vector{<:Real}, paxis::Matrix{<:Real})
+function vertices(box::HyperBox{D,T,N}) where {D,T,N}
+    pts = SVector{D,T}[]
+    for p in product([[-1, 1] for _ in 1:D]...)
+        push!(pts, box.center + box.paxis * SVector{D,T}(p))
+    end
+
+    return pts
+end
+
+function hyper_box(center::AbstractVector{T}, paxis::AbstractMatrix{T}) where {T}
     D = length(center)
-    T = eltype(paxis)
-    N = D * D
-
     @assert size(paxis) == (D, D) "size(paxis) ≠ ($D, $D)"
-    @assert !isapprox(det(paxis), 0) "the column of paxis must form a basis."
 
+    N = D * D
     return HyperBox{D,T,N}(SVector{D,T}(center), SMatrix{D,D,T,N}(paxis))
 end
 
-function HyperBox(center::Real, half_width::Real)
-    @assert half_width ≥ 0 "paxis must be non-negative."
-
-    T = typeof(half_width)
-
+function hyper_box(center::T, half_width::T) where {T}
     return HyperBox{1,T,1}(SVector{1,T}(center), SMatrix{1,1,T,1}(half_width))
+end
+
+function (f::AffineMap{D,T,N})(hb::HyperBox{D,T,N}) where {D,T,N}
+    return HyperBox{D,T,N}(f(hb.center), f.A * hb.paxis)
 end
 
 struct Segment{T}
@@ -58,7 +64,7 @@ struct Polygon{T}
     vertices::Vector{SVector{2,T}}
 end
 
-function Polygon(vertices::Vector{Vector{T}}) where {T<:Real}
+function Polygon(vertices::Vector{Vector{T}}) where {T}
     return Polygon{T}([SVector{2,T}(v) for v in vertices])
 end
 
@@ -70,10 +76,12 @@ end
 
 function Polyhedron(
     vertices::Vector{Vector{T}}, triangles::NTuple{3,Vector{S}}, edges::NTuple{2,Vector{S}}
-) where {T<:Real,S<:Integer}
-    return Polyhedron{T,S}([SVector{3,T}(v) for v in vertices], _1_to_0.(triangles), edges)
+) where {T,S}
+    return Polyhedron{T,S}(
+        [SVector{3,T}(v) for v in vertices], _shift_down.(triangles), edges
+    )
 end
 
-function _1_to_0(v::Vector{S})::Vector{S} where {S<:Integer}
+function _shift_down(v::Vector{S}) where {S}
     return v .- 1
 end

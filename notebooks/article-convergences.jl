@@ -30,8 +30,8 @@ begin
     const save_data = false # take some time
 
     #! Ploting constants
-    const add_title = false
-    const save_plot = true
+    const add_title = true
+    const save_plot = false
 
     "Global parameters"
 end
@@ -44,14 +44,14 @@ end
 
 # ╔═╡ f40a28d9-7577-4632-94b7-a617d91c1184
 function reference_h(
-    attractor::src.Attractor{D,T,N}, fct::Function, k::Int, p::Int
-) where {D,T<:Real,N}
-    quad = src.compute_quadrature(attractor, "Chebyshev-1", k)
+    sas::src.SelfAffineSet{D,T,N}, fct::Function, k::Int, p::Int
+) where {D,T,N}
+    quad = src.compute_quadrature(sas, "Chebyshev-1", k)
     for _ in 1:(p - 1)
-        quad = src.refine(attractor, quad)
+        quad = src.refine(sas, quad)
     end
     res0 = quad(fct)
-    quad = src.refine(attractor, quad)
+    quad = src.refine(sas, quad)
     res1 = quad(fct)
 
     rel_err = abs((res0 / res1 - 1))
@@ -61,16 +61,13 @@ end
 
 # ╔═╡ c9299045-5429-43ee-a3d1-4a1817f09512
 function sequence_h_version(
-    attractor::src.Attractor{D,T,N},
-    quad::src.Quadrature{D,T},
-    fct::Function,
-    nb_pts_max::Int,
-) where {D,T<:Real,N}
+    sas::src.SelfAffineSet{D,T,N}, quad::src.Quadrature{D,T}, fct::Function, nb_pts_max::Int
+) where {D,T,N}
     nb_pts = [length(quad)]
     values = [quad(fct)]
 
     while length(quad) ≤ nb_pts_max
-        quad = src.refine(attractor, quad)
+        quad = src.refine(sas, quad)
 
         push!(nb_pts, length(quad))
         push!(values, quad(fct))
@@ -81,17 +78,17 @@ end
 
 # ╔═╡ 131d23e1-6451-419f-afce-edd809c7fc67
 function sequence_p_version(
-    attractor::src.Attractor{D,T,N}, type_points::String, fct::Function, nb_pts_max::Int
-) where {D,T<:Real,N}
+    sas::src.SelfAffineSet{D,T,N}, type_points::String, fct::Function, nb_pts_max::Int
+) where {D,T,N}
     p = 2
-    quad = src.compute_quadrature(attractor, type_points, p; maxiter=MAXITER)
+    quad = src.compute_quadrature(sas, type_points, p; maxiter=MAXITER)
 
     nb_pts = [length(quad)]
     values = [quad(fct)]
     p += 1
 
     while length(quad) ≤ nb_pts_max
-        quad = src.compute_quadrature(attractor, type_points, p; maxiter=MAXITER)
+        quad = src.compute_quadrature(sas, type_points, p; maxiter=MAXITER)
 
         push!(nb_pts, length(quad))
         push!(values, quad(fct))
@@ -112,31 +109,29 @@ end
 
 # ╔═╡ b8fdbae2-445d-444f-8561-3fc953a84983
 function _save_data(;
-    attractor::src.Attractor{D,T,N}, k::Real, x0::SVector{D,T}, Nh::Int, Np::Int
-) where {D,T<:Real,N}
+    sas::src.SelfAffineSet{D,T,N}, k::Real, x0::SVector{D,T}, Nh::Int, Np::Int
+) where {D,T,N}
     fct = x -> green_kernel(k, x, x0)
     point_type = "Chebyshev-1"
 
     data = OrderedDict("k" => k, "x0" => x0, "point-type" => "Chebyshev-1")
 
-    result, precision = reference_h(attractor, fct, 7, 5)
+    result, precision = reference_h(sas, fct, 7, 5)
     data["reference"] = OrderedDict(
         "value-real" => real(result), "value-imag" => imag(result), "precision" => precision
     )
 
     data["barycenter-rule"] = result_to_dict(
-        sequence_h_version(attractor, src.barycenter_rule(attractor), fct, Nh)
+        sequence_h_version(sas, src.barycenter_rule(sas), fct, Nh)
     )
     for (i, p) in enumerate(2:6)
         data["h-version-Q$i"] = result_to_dict(
-            sequence_h_version(
-                attractor, src.compute_quadrature(attractor, point_type, p), fct, Nh
-            ),
+            sequence_h_version(sas, src.compute_quadrature(sas, point_type, p), fct, Nh)
         )
     end
-    data["p-version"] = result_to_dict(sequence_p_version(attractor, point_type, fct, Np))
+    data["p-version"] = result_to_dict(sequence_p_version(sas, point_type, fct, Np))
 
-    open("../data-convergences/$(attractor.name).toml", "w") do io
+    open("../data-convergences/$(sas.name).toml", "w") do io
         TOML.print(io, data)
     end
 
@@ -151,7 +146,7 @@ if save_data
         src.sierpinski_triangle(0.5),
         src.koch_snowflake(),
     ]
-        _save_data(; attractor=attractor, k=5.0, x0=SVector{2}([2.0, 0.5]), Nh=2048, Np=626)
+        _save_data(; sas=attractor, k=5.0, x0=SVector{2}([2.0, 0.5]), Nh=2048, Np=626)
     end
 end
 

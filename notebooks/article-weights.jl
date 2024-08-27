@@ -36,9 +36,9 @@ end
 
 # ╔═╡ f788e3a3-181f-4676-9463-ed5b53e47223
 function _save_weights(
-    attractor::src.Attractor, M_max::Int, suffix::Union{String,Nothing}=nothing
+    sas::src.SelfAffineSet, M_max::Int, suffix::Union{String,Nothing}=nothing
 )
-    filename = attractor.name
+    filename = sas.name
     if !isnothing(suffix)
         filename = filename * "-$suffix"
     end
@@ -48,7 +48,7 @@ function _save_weights(
         write(file, "1,$(@sprintf("%.16e", 1))\n")
 
         for M in 2:M_max
-            quad = src.compute_quadrature(attractor, type_points, M; maxiter=2000)
+            quad = src.compute_quadrature(sas, type_points, M; maxiter=2000)
 
             n = @sprintf("%d", length(quad))
             w = @sprintf("%.16e", sum(abs.(quad.weights)))
@@ -74,8 +74,8 @@ end
 
 # ╔═╡ 00cf0514-7931-4d7e-a523-ae918eac6de3
 function cantor_set_weights(M::Int)
-    attractor = src.cantor_set(1 / 3, [0, 1])
-    quad = src.compute_quadrature(attractor, type_points, M)
+    sas = src.cantor_set(1 / 3, [0.0, 1.0])
+    quad = src.compute_quadrature(sas, type_points, M)
     w_lim = extrema(quad.weights)
     W = maximum(abs.(w_lim))
 
@@ -83,12 +83,9 @@ function cantor_set_weights(M::Int)
     X = (-dx, 1 + dx)
     Y = (w_lim[1] - dy, w_lim[2] + dy)
 
-    pf = [[
-        only(attractor.bounding_box.center) - only(attractor.bounding_box.paxis),
-        only(attractor.bounding_box.center) + only(attractor.bounding_box.paxis),
-    ]]
+    pf = [src.vertices(sas.bounding_box)]
     for _ in 1:5
-        pf = [S.(part) for S in attractor.ifs for part in pf]
+        pf = [S.(part) for S in sas.ifs for part in pf]
     end
 
     fig = Figure()
@@ -104,7 +101,7 @@ function cantor_set_weights(M::Int)
     for p in pf
         poly!(
             ax,
-            [(p[1], Y[1]), (p[2], Y[1]), (p[2], Y[2]), (p[1], Y[2])];
+            [(p[1][1], Y[1]), (p[2][1], Y[1]), (p[2][1], Y[2]), (p[1][1], Y[2])];
             color=(:black, 0.3),
         )
     end

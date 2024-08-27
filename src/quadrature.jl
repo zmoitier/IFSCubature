@@ -23,40 +23,40 @@ function Quadrature(
     return Quadrature{D,S}(pts, weights)
 end
 
-length(quad::Quadrature{D,T}) where {D,T<:Real} = length(quad.weights)
+length(quad::Quadrature{D,T}) where {D,T} = length(quad.weights)
 
-function (quad::Quadrature)(fct::Function)::Number
+function (quad::Quadrature)(fct::Function)
     return sum(quad.weights .* fct.(quad.points))
 end
 
-function refine(attractor::Attractor{D,T,N}, quad::Quadrature{D,T}) where {D,T<:Real,N}
+function refine(sas::SelfAffineSet{D,T,N}, quad::Quadrature{D,T}) where {D,T,N}
     x = reinterpret(reshape, T, quad.points)
-    d = attractor.hausdorff_dim
+    d = sas.hausdorff_dim
 
     if D == 1
-        x_new = vcat([S.A .* x .+ S.b for S in attractor.ifs]...)'
+        x_new = vcat([S.A .* x .+ S.b for S in sas.ifs]...)'
     else
-        x_new = hcat([S.A * x .+ S.b for S in attractor.ifs]...)
+        x_new = hcat([S.A * x .+ S.b for S in sas.ifs]...)
     end
 
     return Quadrature{D,T}(
         [SVector{D,T}(v) for v in eachcol(x_new)],
-        vcat([S.factor^d .* quad.weights for S in attractor.ifs]...),
+        vcat([μ .* quad.weights for (S, μ) in zip(sas.ifs, sas.measure)]...),
     )
 end
 
-function barycenter_rule(attractor::Attractor{D,T,N})::Quadrature{D,T} where {D,T<:Real,N}
-    d = attractor.hausdorff_dim
+function barycenter_rule(sas::SelfAffineSet{D,T,N}) where {D,T<:Real,N}
+    d = sas.hausdorff_dim
 
-    A = sum([S.factor^d .* S.A for S in attractor.ifs])
-    b = sum([S.factor^d .* S.b for S in attractor.ifs])
+    A = sum([μ .* S.A for S in zip(sas.ifs, sas.measure)])
+    b = sum([μ .* S.b for S in zip(sas.ifs, sas.measure)])
 
     x0 = (I - A) \ b
 
     return Quadrature{D,T}([x0], [T(1)])
 end
 
-function get_points(type_points::String, nb_points::Int)::Vector
+function get_points(type_points::String, nb_points::Int)
     if type_points == "Equispaced-1"
         return equispaced_points(nb_points; kind=1)
 
@@ -92,9 +92,9 @@ function get_points(type_points::String, nb_points::Int)::Vector
 end
 
 function matrix_from_lagrange_polynomials(
-    attractor::Attractor{1,T,1}, type_points::String, nb_points::Int
-)::Tuple{Matrix{T},Vector{SVector{1,T}}} where {T}
-    bounding_box = attractor.bounding_box
+    sas::SelfAffineSet{1,T,1}, type_points::String, nb_points::Int
+) where {T}
+    bounding_box = sas.bounding_box
 
     points =
         only(bounding_box.paxis) .* get_points(type_points, nb_points) .+
@@ -103,17 +103,12 @@ function matrix_from_lagrange_polynomials(
     L = LagrangePolynomials(points)
     n = length(L)
 
-    d = attractor.hausdorff_dim
-
-    factor = T(0)
     pts = zero(points)
-
     M = zeros(T, (n, n))
-    for S in attractor.ifs
-        factor = S.factor^d
+    for (S, μ) in zip(sas.ifs, sas.measure)
         pts = S.A .* points .+ S.b
         for i in 1:n
-            M[i, :] += factor .* L.(pts, i)
+            M[i, :] += μ .* L.(pts, i)
         end
     end
 
@@ -121,9 +116,9 @@ function matrix_from_lagrange_polynomials(
 end
 
 function matrix_from_lagrange_polynomials(
-    attractor::Attractor{2,T,4}, type_points::String, nb_points::Int
-)::Tuple{Matrix{T},Vector{SVector{2,T}}} where {T}
-    bounding_box = attractor.bounding_box
+    sas::SelfAffineSet{2,T,4}, type_points::String, nb_points::Int
+) where {T}
+    bounding_box = sas.bounding_box
     v = get_points(type_points, nb_points)
 
     L = LagrangePolynomials(v)
@@ -136,17 +131,13 @@ function matrix_from_lagrange_polynomials(
     end
 
     pts = bounding_box.paxis * pts_ref .+ bounding_box.center
-    d = attractor.hausdorff_dim
 
-    factor = T(0)
     pts_tmp = zero(pts_ref)
-
     M = zeros(T, (n2, n2))
-    for S in attractor.ifs
-        factor = S.factor^d
+    for (S, μ) in zip(sas.ifs, sas.measure)
         pts_tmp = bounding_box.paxis \ (S.A * pts .+ S.b .- bounding_box.center)
         for (i, (p, q)) in enumerate(product(1:n, 1:n))
-            M[i, :] += factor .* L.(view(pts_tmp, 1, :), p) .* L.(view(pts_tmp, 2, :), q)
+            M[i, :] += μ .* L.(view(pts_tmp, 1, :), p) .* L.(view(pts_tmp, 2, :), q)
         end
     end
 
@@ -154,9 +145,9 @@ function matrix_from_lagrange_polynomials(
 end
 
 function matrix_from_lagrange_polynomials(
-    attractor::Attractor{3,T,9}, type_points::String, nb_points::Int
-)::Tuple{Matrix{T},Vector{SVector{3,T}}} where {T}
-    bounding_box = attractor.bounding_box
+    sas::SelfAffineSet{3,T,9}, type_points::String, nb_points::Int
+) where {T}
+    bounding_box = sas.bounding_box
     v = get_points(type_points, nb_points)
 
     L = LagrangePolynomials(v)
@@ -169,18 +160,14 @@ function matrix_from_lagrange_polynomials(
     end
 
     pts = bounding_box.paxis * pts_ref .+ bounding_box.center
-    d = attractor.hausdorff_dim
 
-    factor = T(0)
     pts_tmp = zero(pts_ref)
-
     M = zeros(T, (n3, n3))
-    for S in attractor.ifs
-        factor = S.factor^d
+    for (S, μ) in zip(sas.ifs, sas.measure)
         pts_tmp = bounding_box.paxis \ (S.A * pts .+ S.b .- bounding_box.center)
         for (i, (p, q, r)) in enumerate(product(1:n, 1:n, 1:n))
             M[i, :] +=
-                factor .* L.(view(pts_tmp, 1, :), p) .* L.(view(pts_tmp, 2, :), q) .*
+                μ .* L.(view(pts_tmp, 1, :), p) .* L.(view(pts_tmp, 2, :), q) .*
                 L.(view(pts_tmp, 3, :), r)
         end
     end
@@ -189,12 +176,12 @@ function matrix_from_lagrange_polynomials(
 end
 
 function compute_quadrature(
-    attractor::Attractor{D,T,N},
+    sas::SelfAffineSet{D,T,N},
     type_points::String,
     nb_points::Int;
     maxiter::Union{Nothing,Integer}=nothing,
-)::Quadrature{D,T} where {D,T<:Real,N}
-    M, points = matrix_from_lagrange_polynomials(attractor, type_points, nb_points)
+) where {D,T,N}
+    M, points = matrix_from_lagrange_polynomials(sas, type_points, nb_points)
     J = length(points)
 
     if isnothing(maxiter)
