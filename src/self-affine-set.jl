@@ -13,8 +13,8 @@ struct SelfAffineSet{D,T,N}
         name::String,
     ) where {D,T,N}
         @assert length(ifs) == length(measure) "length(ifs) == length(measure)"
-        @assert all(all(f.ρ .< 1) for f in ifs) "The matrices `A` must be contrations."
-        @assert all(0 .< measure .< 1) "The measure weights must be in the interval (0, 1)."
+        @assert all(all(opnorm(S.A) < 1) for S in ifs) "The matrices `A` must be contrations."
+        @assert all(0 .≤ measure .< 1) "The measure weights must be in the interval (0, 1)."
         @assert sum(measure) ≈ 1 "The measure weights must sum to 1."
 
         return new{D,T,N}(ifs, measure, bounding_ball, bounding_box, name)
@@ -47,34 +47,49 @@ function fix_point(f::AffineMap{D,T,N}) where {D,T,N}
     return (I - f.A) \ f.b
 end
 
-"""Return the bounding ball."""
-function bounding_ball(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    ball_mean = _ball_mean(ifs)
-    ball_fix_pts = _ball_fix_pts(ifs)
+function smallest_radius(z::AbstractVector, ifs::Vector{AffineMap}, p::Real=2)
+    return maximum(norm(S(z) - z, p) / (1 - opnorm(S.A, p)) for S in ifs)
+end
 
-    if ball_mean.radius < ball_fix_pts.radius
-        return ball_mean
+"""Return the smallest bounding ball."""
+function bounding_ball(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
+    z, r = _bounding_p(ifs, 2)
+    return hyper_ball(z, r)
+end
+
+"""Return the smallest bounding box."""
+function bounding_box(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
+    z, r = _bounding_p(ifs, Inf)
+    return hyper_box(z, Diagonal(fill(r, D)))
+end
+
+function _bounding_p(ifs::Vector{AffineMap{D,T,N}}, p::Real) where {D,T,N}
+    fs = 1 ./ (1 .- [opnorm(S.A, p) for S in ifs])
+    x0 = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
+    res = Optim.optimize(z -> _smallest_radius(z, ifs, fs, p), x0)
+    return (Optim.minimizer(res), Optim.minimum(res))
+end
+
+function _smallest_radius(
+    z::Union{SVector{D,T},MVector{D,T}},
+    ifs::Vector{AffineMap{D,T,N}},
+    fs::Vector{T},
+    p::Real,
+) where {D,T,N}
+    return maximum(f * norm(S(z) - z, p) for (S, f) in zip(ifs, fs))
+end
+
+function similarity_dimension(ρ::Vector)
+    bracket = (-log(length(ρ))) ./ log.(extrema(ρ))
+    return find_zero(d -> sum(ρ .^ d) .- 1, bracket, Brent())
+end
+
+function dimension(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
+    η, ρ = zeros(T, length(ifs)), zeros(T, length(ifs))
+    for (i, S) in enumerate(ifs)
+        σ = svdvals(S.A)
+        η[i], ρ[i] = σ[end], σ[1]
     end
 
-    return ball_fix_pts
-end
-
-function _ball_mean(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    s = sum(S.ρ for S in ifs)
-    A = sum(S.ρ * S.A for S in ifs) ./ s
-    b = sum(S.ρ * S.b for S in ifs) ./ s
-
-    z = (I - A) \ b
-    r = maximum([norm(S.A * z + S.b - z) / (1 - S.ρ) for S in ifs])
-
-    return HyperBall{D,T}(z, r)
-end
-
-function _ball_fix_pts(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    c = [fix_point(S) for S in ifs]
-
-    z, _ = boundingsphere(c)
-    r = maximum([norm(S.A * z + S.b - z) / (1 - S.ρ) for S in ifs])
-
-    return HyperBall{D,T}(z, r)
+    return (similarity_dimension(η), similarity_dimension(ρ))
 end

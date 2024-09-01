@@ -1,13 +1,6 @@
 struct AffineMap{D,T,N}
     A::SMatrix{D,D,T,N}
     b::SVector{D,T}
-    ρ::Float64
-    η::Float64
-
-    function AffineMap(A::SMatrix{D,D,T,N}, b::SVector{D,T}) where {D,T,N}
-        σ = svdvals(A)
-        return new{D,T,N}(A, b, σ[1], σ[end])
-    end
 end
 
 function affine_map(
@@ -31,11 +24,11 @@ function (f::AffineMap{1,T,1})(x::T)::T where {T}
     return f.A[1, 1] * x + f.b[1]
 end
 
-function (f::AffineMap{D,T,N})(x::SVector{D,T}) where {D,T,N}
+function (f::AffineMap{D,T,N})(x::Union{SVector{D,T},MVector{D,T}}) where {D,T,N}
     return f.A * x + f.b
 end
 
-function (f::AffineMap{D,T,N})(v::Matrix{T})::SVector{D,T} where {D,T,N}
+function (f::AffineMap{D,T,N})(v::Array{T}) where {D,T,N}
     return f.A * v .+ f.b
 end
 
