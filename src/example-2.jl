@@ -145,6 +145,9 @@ function cantor_dust_non_sym()
 
     ball = bounding_ball(ifs)
     box = bounding_box(ifs)
+    if ball.radius < box.paxis[1, 1]
+        box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
+    end
 
     d = dimension(ifs)
     measure = [opnorm(S.A) for S in ifs] .^ d[2]
@@ -163,6 +166,9 @@ function barnsley_fern()
 
     ball = bounding_ball(ifs)
     box = bounding_box(ifs)
+    if ball.radius < box.paxis[1, 1]
+        box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
+    end
 
     d = dimension(ifs)[1]
     measure = [svdvals(S.A)[end] for S in ifs] .^ d

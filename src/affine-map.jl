@@ -1,6 +1,11 @@
 struct AffineMap{D,T,N}
     A::SMatrix{D,D,T,N}
     b::SVector{D,T}
+    ρ::T
+
+    function AffineMap(A::SMatrix{D,D,T,N}, b::SVector{D,T}) where {D,T,N}
+        return new{D,T,N}(A, b, opnorm(A))
+    end
 end
 
 function affine_map(

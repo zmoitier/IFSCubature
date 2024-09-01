@@ -10,7 +10,7 @@ begin
     Pkg.activate(Base.current_project())
     Pkg.instantiate()
 
-    using LinearAlgebra, CairoMakie
+    using CairoMakie
 
     import IFSCubature as src
 end
