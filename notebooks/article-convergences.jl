@@ -46,13 +46,16 @@ end
 function reference_h(
     sas::src.SelfAffineSet{D,T,N}, fct::Function, k::Int, p::Int
 ) where {D,T,N}
-    quad = src.compute_quadrature(sas, "Chebyshev-1", k)
+    cbt = src.compute_cubature(sas, "Chebyshev-1", k)
+
+    cbts = [cbt]
     for _ in 1:(p - 1)
-        quad = src.refine(sas, quad)
+        src.refine!(cbts, sas)
     end
-    res0 = quad(fct)
-    quad = src.refine(sas, quad)
-    res1 = quad(fct)
+    res0 = src.integral(fct, cbts)
+
+    src.refine!(cbts, sas)
+    res1 = src.integral(fct, cbts)
 
     rel_err = abs((res0 / res1 - 1))
 
@@ -61,16 +64,22 @@ end
 
 # ╔═╡ c9299045-5429-43ee-a3d1-4a1817f09512
 function sequence_h_version(
-    sas::src.SelfAffineSet{D,T,N}, quad::src.Quadrature{D,T}, fct::Function, nb_pts_max::Int
+    sas::src.SelfAffineSet{D,T,N}, cbt::src.Cubature{D,T}, fct::Function, nb_pts_max::Int
 ) where {D,T,N}
-    nb_pts = [length(quad)]
-    values = [quad(fct)]
+    nb_pts = [length(cbt)]
+    values = [src.integral(fct, cbt)]
 
-    while length(quad) ≤ nb_pts_max
-        quad = src.refine(sas, quad)
+    hcbt = [cbt]
+    while nb_pts[end] < nb_pts_max
+        src.refine!(hcbt, sas)
 
-        push!(nb_pts, length(quad))
-        push!(values, quad(fct))
+        n, r = 0, 0
+        for cbt in hcbt
+            n += length(cbt)
+            r += src.integral(fct, cbt)
+        end
+        push!(nb_pts, n)
+        push!(values, r)
     end
 
     return (nb_pts, values)
@@ -81,17 +90,17 @@ function sequence_p_version(
     sas::src.SelfAffineSet{D,T,N}, type_points::String, fct::Function, nb_pts_max::Int
 ) where {D,T,N}
     p = 2
-    quad = src.compute_quadrature(sas, type_points, p; maxiter=MAXITER)
+    cbt = src.compute_cubature(sas, type_points, p; maxiter=MAXITER)
 
-    nb_pts = [length(quad)]
-    values = [quad(fct)]
+    nb_pts = [length(cbt)]
+    values = [src.integral(fct, cbt)]
     p += 1
 
-    while length(quad) ≤ nb_pts_max
-        quad = src.compute_quadrature(sas, type_points, p; maxiter=MAXITER)
+    while length(cbt) ≤ nb_pts_max
+        cbt = src.compute_cubature(sas, type_points, p; maxiter=MAXITER)
 
-        push!(nb_pts, length(quad))
-        push!(values, quad(fct))
+        push!(nb_pts, length(cbt))
+        push!(values, src.integral(fct, cbt))
 
         p += 1
     end
@@ -109,7 +118,12 @@ end
 
 # ╔═╡ b8fdbae2-445d-444f-8561-3fc953a84983
 function _save_data(;
-    sas::src.SelfAffineSet{D,T,N}, k::Real, x0::SVector{D,T}, Nh::Int, Np::Int
+    sas::src.SelfAffineSet{D,T,N},
+    k::Real,
+    x0::SVector{D,T},
+    Nh::Int,
+    Np::Int,
+    suffix::String="",
 ) where {D,T,N}
     fct = x -> green_kernel(k, x, x0)
     point_type = "Chebyshev-1"
@@ -126,12 +140,12 @@ function _save_data(;
     )
     for (i, p) in enumerate(2:6)
         data["h-version-Q$i"] = result_to_dict(
-            sequence_h_version(sas, src.compute_quadrature(sas, point_type, p), fct, Nh)
+            sequence_h_version(sas, src.compute_cubature(sas, point_type, p), fct, Nh)
         )
     end
     data["p-version"] = result_to_dict(sequence_p_version(sas, point_type, fct, Np))
 
-    open("../data-convergences/$(sas.name).toml", "w") do io
+    open("../data-convergences/$(sas.name)$suffix.toml", "w") do io
         TOML.print(io, data)
     end
 
@@ -142,11 +156,33 @@ end
 if save_data
     for attractor in [
         src.vicsek_2d(1 / 3),
-        src.vicsek_2d(1 / 3, true),
+        src.vicsek_2d(1 / 3, π / 4),
         src.sierpinski_triangle(0.5),
+        src.sierpinski_triangle_fat(2),
         src.koch_snowflake(),
+        src.cantor_dust_non_sym(),
+        src.barnsley_fern(),
     ]
         _save_data(; sas=attractor, k=5.0, x0=SVector{2}([2.0, 0.5]), Nh=2048, Np=626)
+    end
+
+    _save_data(;
+        sas=src.vicsek_3d(1 / 3, true),
+        k=5.0,
+        x0=SVector{3}([2.0, 0.5, 1.0]),
+        Nh=2048,
+        Np=3000,
+    )
+
+    for x in [2.0, 1.5, 1.25, 1.0, 0.0]
+        _save_data(;
+            sas=src.cantor_dust(1 / 3, [-1.0, 1.0], 2),
+            k=5.0,
+            x0=SVector{2}([x, 0]),
+            Nh=2048,
+            Np=626,
+            suffix=@sprintf("-%.2f", x)
+        )
     end
 end
 

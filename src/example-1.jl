@@ -19,10 +19,10 @@ function cantor_set(
 
     ifs = [contractive_similarity(ρ, [c]) for (ρ, c) in zip(ρ, c)]
 
-    b_ball = hyper_ball((c[end] + c[1]) / 2, (c[end] - c[1]) / 2)
-    b_box = hyper_box((c[end] + c[1]) / 2, (c[end] - c[1]) / 2)
+    ball = hyper_ball((c[end] + c[1]) / 2, (c[end] - c[1]) / 2)
+    box = hyper_box((c[end] + c[1]) / 2, (c[end] - c[1]) / 2)
 
-    return SelfAffineSet(ifs, measure, b_ball, b_box, name)
+    return SelfAffineSet(ifs, measure, ball, box, name)
 end
 
 """Return the Cantor set."""

@@ -94,7 +94,7 @@ _plot(
 
 # ╔═╡ aeca916d-a93d-4aaf-9dd2-e2e7e6c54c93
 _plot(
-    src.fat_sierpinski_triangle(2),
+    src.sierpinski_triangle_fat(2),
     src.Polygon([[1.0, 0.0], [-0.5, √3 / 2], [-0.5, -√3 / 2]]),
     2,
 )

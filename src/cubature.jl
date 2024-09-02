@@ -1,10 +1,11 @@
-struct Quadrature{D,T}
+struct Cubature{D,T}
     points::Vector{SVector{D,T}}
     weights::Vector{T}
+    h::T
 end
 
-function Quadrature(
-    points::Vector{T}, weights::Vector{<:Real}
+function Cubature(
+    points::Vector{T}, weights::Vector{<:Real}, h::Real
 ) where {T<:Union{Real,Vector{<:Real}}}
     @assert length(points) == length(weights) "The length of points and weights must be the same."
     @assert isapprox(sum(weights), 1) "the sum of the weights must = 1."
@@ -20,40 +21,52 @@ function Quadrature(
         pts = [SVector{D,S}(p) for p in points]
     end
 
-    return Quadrature{D,S}(pts, weights)
+    return Cubature{D,S}(pts, weights, h)
 end
 
-length(quad::Quadrature{D,T}) where {D,T} = length(quad.weights)
+length(cbt::Cubature{D,T}) where {D,T} = length(cbt.weights)
 
-function (quad::Quadrature)(fct::Function)
-    return sum(quad.weights .* fct.(quad.points))
+function integral(fct::Function, cbt::Cubature{D,T}) where {D,T}
+    return sum(cbt.weights .* fct.(cbt.points))
 end
 
-function refine(sas::SelfAffineSet{D,T,N}, quad::Quadrature{D,T}) where {D,T,N}
-    x = reinterpret(reshape, T, quad.points)
-    d = sas.hausdorff_dim
+function integral(fct::Function, cbts::Vector{Cubature{D,T}}) where {D,T}
+    s = 0
+    for i in length(cbts):-1:1
+        s += integral(fct, cbts[i])
+    end
+    return s
+end
 
-    if D == 1
-        x_new = vcat([S.A .* x .+ S.b for S in sas.ifs]...)'
-    else
-        x_new = hcat([S.A * x .+ S.b for S in sas.ifs]...)
+function refine!(cbts::Vector{Cubature{D,T}}, sas::SelfAffineSet{D,T,N}) where {D,T,N}
+    n = length(cbts)
+    for (i, cbt) in enumerate(cbts)
+        if !(cbt.h ≈ cbts[1].h)
+            n = i
+        end
     end
 
-    return Quadrature{D,T}(
-        [SVector{D,T}(v) for v in eachcol(x_new)],
-        vcat([μ .* quad.weights for (S, μ) in zip(sas.ifs, sas.measure)]...),
-    )
+    for _ in 1:n
+        cbt = popfirst!(cbts)
+        for cbt_ref in [
+            Cubature{D,T}(S.(cbt.points), μ .* cbt.weights, S.ρ * cbt.h) for
+            (S, μ) in zip(sas.ifs, sas.measure)
+        ]
+            i = searchsortedlast(cbts, cbt_ref; lt=(a, b) -> a.h < b.h, rev=true)
+            insert!(cbts, i + 1, cbt_ref)
+        end
+    end
+
+    return nothing
 end
 
 function barycenter_rule(sas::SelfAffineSet{D,T,N}) where {D,T<:Real,N}
-    d = sas.hausdorff_dim
-
-    A = sum([μ .* S.A for S in zip(sas.ifs, sas.measure)])
-    b = sum([μ .* S.b for S in zip(sas.ifs, sas.measure)])
+    A = sum([μ .* S.A for (S, μ) in zip(sas.ifs, sas.measure)])
+    b = sum([μ .* S.b for (S, μ) in zip(sas.ifs, sas.measure)])
 
     x0 = (I - A) \ b
 
-    return Quadrature{D,T}([x0], [T(1)])
+    return Cubature{D,T}([x0], [T(1)], sas.bounding_ball.radius)
 end
 
 function get_points(type_points::String, nb_points::Int)
@@ -175,7 +188,7 @@ function matrix_from_lagrange_polynomials(
     return (M, [SVector{3,T}(p) for p in eachcol(pts)])
 end
 
-function compute_quadrature(
+function compute_cubature(
     sas::SelfAffineSet{D,T,N},
     type_points::String,
     nb_points::Int;
@@ -196,5 +209,5 @@ function compute_quadrature(
     weights /= sum(weights)
 
     @assert isapprox(sum(weights), 1) "the sum of the weights must = 1."
-    return Quadrature{D,T}(points, weights)
+    return Cubature{D,T}(points, weights, sas.bounding_ball.radius)
 end

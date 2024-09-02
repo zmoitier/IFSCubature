@@ -3,6 +3,10 @@ struct HyperBall{D,T}
     radius::T
 end
 
+function vertices(ball::HyperBall{1,T}) where {T}
+    return [ball.center[1] - ball.radius, ball.center[1] + ball.radius]
+end
+
 function hyper_ball(center::AbstractVector{T}, radius::T) where {T}
     @assert radius > 0 "radius=$radius > 0."
 
@@ -32,6 +36,10 @@ function vertices(box::HyperBox{D,T,N}) where {D,T,N}
     end
 
     return pts
+end
+
+function vertices(box::HyperBox{1,T,1}) where {T}
+    return [box.center[1] - box.paxis[1], box.center[1] + box.paxis[1]]
 end
 
 function hyper_box(center::AbstractVector{T}, paxis::AbstractMatrix{T}) where {T}

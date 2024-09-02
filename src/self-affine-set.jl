@@ -13,7 +13,7 @@ struct SelfAffineSet{D,T,N}
         name::String,
     ) where {D,T,N}
         @assert length(ifs) == length(measure) "length(ifs) == length(measure)"
-        @assert all(all(opnorm(S.A) < 1) for S in ifs) "The matrices `A` must be contrations."
+        @assert all(all(S.ρ < 1) for S in ifs) "The matrices `A` must be contrations."
         @assert all(0 .≤ measure .< 1) "The measure weights must be in the interval (0, 1)."
         @assert sum(measure) ≈ 1 "The measure weights must sum to 1."
 
@@ -47,27 +47,36 @@ function fix_point(f::AffineMap{D,T,N}) where {D,T,N}
     return (I - f.A) \ f.b
 end
 
-function smallest_radius(z::AbstractVector, ifs::Vector{AffineMap}, p::Real=2)
+function smallest_radius(
+    z::AbstractVector, ifs::Vector{AffineMap{D,T,N}}, p::Real=2
+) where {D,T,N}
+    if p ≈ 2
+        return maximum(norm(S(z) - z, p) / (1 - S.ρ) for S in ifs)
+    end
     return maximum(norm(S(z) - z, p) / (1 - opnorm(S.A, p)) for S in ifs)
 end
 
 """Return the smallest bounding ball."""
 function bounding_ball(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    z, r = _bounding_p(ifs, 2)
-    return hyper_ball(z, r)
+    fs = 1 ./ (1 .- [S.ρ for S in ifs])
+
+    x0 = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
+    res = Optim.optimize(z -> _smallest_radius(z, ifs, fs, 2), x0)
+    return hyper_ball(Optim.minimizer(res), Optim.minimum(res))
 end
 
 """Return the smallest bounding box."""
 function bounding_box(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    z, r = _bounding_p(ifs, Inf)
-    return hyper_box(z, Diagonal(fill(r, D)))
-end
+    opnorm_inf = [opnorm(S.A, Inf) for S in ifs]
+    for (S, n) in zip(ifs, opnorm_inf)
+        @assert !(isapprox(n, 1) || (n > 1)) "Affine map `$S` is not contracting for ∞-norm."
+    end
 
-function _bounding_p(ifs::Vector{AffineMap{D,T,N}}, p::Real) where {D,T,N}
-    fs = 1 ./ (1 .- [opnorm(S.A, p) for S in ifs])
+    fs = 1 ./ (1 .- opnorm_inf)
     x0 = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
-    res = Optim.optimize(z -> _smallest_radius(z, ifs, fs, p), x0)
-    return (Optim.minimizer(res), Optim.minimum(res))
+    res = Optim.optimize(z -> _smallest_radius(z, ifs, fs, Inf), x0)
+
+    return hyper_box(Optim.minimizer(res), Diagonal(fill(Optim.minimum(res), D)))
 end
 
 function _smallest_radius(

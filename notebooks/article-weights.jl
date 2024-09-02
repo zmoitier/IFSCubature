@@ -48,7 +48,7 @@ function _save_weights(
         write(file, "1,$(@sprintf("%.16e", 1))\n")
 
         for M in 2:M_max
-            quad = src.compute_quadrature(sas, type_points, M; maxiter=2000)
+            quad = src.compute_cubature(sas, type_points, M; maxiter=2000)
 
             n = @sprintf("%d", length(quad))
             w = @sprintf("%.16e", sum(abs.(quad.weights)))
@@ -75,7 +75,7 @@ end
 # ╔═╡ 00cf0514-7931-4d7e-a523-ae918eac6de3
 function cantor_set_weights(M::Int)
     sas = src.cantor_set(1 / 3, [0.0, 1.0])
-    quad = src.compute_quadrature(sas, type_points, M)
+    quad = src.compute_cubature(sas, type_points, M)
     w_lim = extrema(quad.weights)
     W = maximum(abs.(w_lim))
 
@@ -130,7 +130,7 @@ cantor_set_weights(100)
 # ╔═╡ ef2380b5-1ac8-43a7-be6c-b50d29608af5
 function vicsek_weights(M::Int)
     attractor = src.vicsek_2d(1 / 3)
-    quad = src.compute_quadrature(attractor, type_points, M)
+    quad = src.compute_cubature(attractor, type_points, M)
     W = maximum(abs.(quad.weights))
 
     pf = [[

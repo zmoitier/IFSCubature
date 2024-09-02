@@ -22,10 +22,10 @@ function sierpinski_tetrahedron(contraction_factor::Union{Float64,Nothing}=nothi
         c in [[1, 0, -√2 / 2], [-1, 0, -√2 / 2], [0, 1, √2 / 2], [0, -1, √2 / 2]]
     ]
 
-    b_ball = hyper_ball(fill(0.0, 3), √(3 / 2))
-    b_box = hyper_box(fill(0.0, 3), Matrix(Diagonal([1.0, 1.0, √2 / 2])))
+    ball = hyper_ball(fill(0.0, 3), √(3 / 2))
+    box = hyper_box(fill(0.0, 3), Matrix(Diagonal([1.0, 1.0, √2 / 2])))
 
-    return SelfAffineSet(ifs, fill(1 / 4, 4), b_ball, b_box, "3d-sierpinski-tetrahedron")
+    return SelfAffineSet(ifs, fill(1 / 4, 4), ball, box, "3d-sierpinski-tetrahedron")
 end
 
 """Return Menger sponge."""
@@ -58,10 +58,10 @@ function menger_sponge()
 
     ifs = [contractive_similarity(ρ, c) for c in fix_points]
 
-    b_ball = hyper_ball(fill(0.0, 3), √3)
-    b_box = hyper_box(fill(0.0, 3), Matrix(Diagonal(fill(1.0, 3))))
+    ball = hyper_ball(fill(0.0, 3), √3)
+    box = hyper_box(fill(0.0, 3), Matrix(Diagonal(fill(1.0, 3))))
 
-    return SelfAffineSet(ifs, fill(1 / 20, 20), b_ball, b_box, "3d-menger-sponge")
+    return SelfAffineSet(ifs, fill(1 / 20, 20), ball, box, "3d-menger-sponge")
 end
 
 """Return the 3d Vicsek fractal."""
@@ -84,8 +84,52 @@ function vicsek_3d(contraction_factor::Float64, central_rotation::Bool=false)
         push!(ifs, contractive_similarity(contraction_factor, [v for v in c]))
     end
 
-    b_ball = hyper_ball(fill(0.0, 3), √3)
-    b_box = hyper_box(fill(0.0, 3), Matrix(Diagonal(fill(1.0, 3))))
+    ball = hyper_ball(fill(0.0, 3), √3)
+    box = hyper_box(fill(0.0, 3), Matrix(Diagonal(fill(1.0, 3))))
 
-    return SelfAffineSet(ifs, fill(1 / 9, 9), b_ball, b_box, name)
+    return SelfAffineSet(ifs, fill(1 / 9, 9), ball, box, name)
+end
+
+"""Return the brick."""
+function brick_3d()
+    ρ = 1 / 3
+    ifs = [
+        contractive_similarity(ρ, c) for c in [
+            [-1, -1, -1],
+            [0, -1, -1],
+            [1, -1, -1],
+            [1, 0, -1],
+            [1, 1, -1],
+            [0, 1, -1],
+            [-1, 1, -1],
+            [-1, 0, -1],
+            #
+            [-1, -1, 0],
+            [1, -1, 0],
+            [1, 0, 0],
+            [1, 1, 0],
+            [0, 1, 0],
+            [-1, 1, 0],
+            [0, 0, 0],
+            [2, 0, 0],
+            [0, 2, 0],
+            #
+            [-1, -1, 1],
+            [0, -1, 1],
+            [1, -1, 1],
+            [1, 0, 1],
+            [1, 1, 1],
+            [0, 1, 1],
+            [-1, 1, 1],
+            [-1, 0, 1],
+            [0, 0, 1],
+            #
+            [0, 0, 2],
+        ]
+    ]
+
+    ball = bounding_ball(ifs)
+    box = bounding_box(ifs)
+
+    return SelfAffineSet(ifs, fill(1 / 27, 27), ball, box, "3d-brick")
 end
