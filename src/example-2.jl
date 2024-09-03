@@ -257,7 +257,7 @@ function cantor_dust_non_sym()
     end
 
     d = dimension(ifs)
-    measure = [opnorm(S.A) for S in ifs] .^ d[2]
+    measure = [S.ρ for S in ifs] .^ d[2]
 
     return SelfAffineSet(ifs, measure, ball, box, "2d-cantor-non-sym")
 end

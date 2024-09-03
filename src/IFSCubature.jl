@@ -4,6 +4,7 @@ using LinearAlgebra
 using StaticArrays
 
 import Base: length
+import DataStructures: BinaryHeap
 import FastGaussQuadrature: gausslegendre, gausslobatto
 import IterativeSolvers: powm!
 import IterTools: partition, product

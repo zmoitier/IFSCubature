@@ -18,20 +18,21 @@ end
 # ╔═╡ b5d45ad9-3996-401f-96e5-78aba17e8686
 begin
     #! Type of points
-    # const type_points = "equispaced"
-    const type_points = "Chebyshev-1"
-    # const type_points = "Chebyshev-2"
-    # const type_points = "Gauss-Legendre"
-    # const type_points = "Gauss-Lobatto"
+    # const POINTTYPE = "equispaced"
+    const POINTTYPE = "Chebyshev-1"
+    # const POINTTYPE = "Chebyshev-2"
+    # const POINTTYPE = "Gauss-Legendre"
+    # const POINTTYPE = "Gauss-Lobatto"
 
     const MAXITER = 2000
 
     #! Data generation
-    const save_data = false # take some time
+    const SAVEDATA = false # take some time
 
     #! Ploting constants
-    const add_title = true
-    const save_plot = false
+    const ADDTITLE = true
+    const SAVEPLOT = false
+    const FONTSIZE = 20
 
     "Global parameters"
 end
@@ -44,42 +45,37 @@ end
 
 # ╔═╡ f40a28d9-7577-4632-94b7-a617d91c1184
 function reference_h(
-    sas::src.SelfAffineSet{D,T,N}, fct::Function, k::Int, p::Int
+    fct::Function; sas::src.SelfAffineSet{D,T,N}, nb_pts_cbt::Int, nb_pts_max::Int
 ) where {D,T,N}
-    cbt = src.compute_cubature(sas, "Chebyshev-1", k)
+    diam = 2 * sas.bounding_ball.radius
+    hcbt1 = src.HCubature(src.compute_cubature(sas, "Chebyshev-1", nb_pts_cbt), diam)
+    hcbt2 = src.HCubature(src.compute_cubature(sas, "Gauss-Legendre", nb_pts_cbt), diam)
 
-    cbts = [cbt]
-    for _ in 1:(p - 1)
-        src.refine!(cbts, sas)
+    while length(hcbt1) < nb_pts_max
+        src.refine!(hcbt1, sas)
+        src.refine!(hcbt2, sas)
     end
-    res0 = src.integral(fct, cbts)
+    r1, r2 = hcbt1(fct), hcbt2(fct)
 
-    src.refine!(cbts, sas)
-    res1 = src.integral(fct, cbts)
-
-    rel_err = abs((res0 / res1 - 1))
-
-    return (res1, rel_err)
+    r = (r1 + r2) / 2
+    if isapprox(r, 0)
+        return (r, abs(r1 - r2))
+    end
+    return (r, abs((r1 - r2) / r))
 end
 
 # ╔═╡ c9299045-5429-43ee-a3d1-4a1817f09512
 function sequence_h_version(
-    sas::src.SelfAffineSet{D,T,N}, cbt::src.Cubature{D,T}, fct::Function, nb_pts_max::Int
+    fct::Function; sas::src.SelfAffineSet{D,T,N}, cbt::src.Cubature{D,T}, nb_pts_max::Int
 ) where {D,T,N}
+    hcbt = src.HCubature(cbt, 2 * sas.bounding_ball.radius)
+
     nb_pts = [length(cbt)]
-    values = [src.integral(fct, cbt)]
-
-    hcbt = [cbt]
-    while nb_pts[end] < nb_pts_max
+    values = [cbt(fct)]
+    while length(hcbt) < nb_pts_max
         src.refine!(hcbt, sas)
-
-        n, r = 0, 0
-        for cbt in hcbt
-            n += length(cbt)
-            r += src.integral(fct, cbt)
-        end
-        push!(nb_pts, n)
-        push!(values, r)
+        push!(nb_pts, length(hcbt))
+        push!(values, hcbt(fct))
     end
 
     return (nb_pts, values)
@@ -87,20 +83,19 @@ end
 
 # ╔═╡ 131d23e1-6451-419f-afce-edd809c7fc67
 function sequence_p_version(
-    sas::src.SelfAffineSet{D,T,N}, type_points::String, fct::Function, nb_pts_max::Int
+    fct::Function; sas::src.SelfAffineSet{D,T,N}, nb_pts_max::Int
 ) where {D,T,N}
-    p = 2
-    cbt = src.compute_cubature(sas, type_points, p; maxiter=MAXITER)
+    cbt = src.compute_cubature(sas, POINTTYPE, 2; maxiter=MAXITER)
 
     nb_pts = [length(cbt)]
-    values = [src.integral(fct, cbt)]
-    p += 1
+    values = [cbt(fct)]
 
-    while length(cbt) ≤ nb_pts_max
-        cbt = src.compute_cubature(sas, type_points, p; maxiter=MAXITER)
+    p = 3
+    while length(cbt) < nb_pts_max
+        cbt = src.compute_cubature(sas, POINTTYPE, p; maxiter=MAXITER)
 
         push!(nb_pts, length(cbt))
-        push!(values, src.integral(fct, cbt))
+        push!(values, cbt(fct))
 
         p += 1
     end
@@ -126,24 +121,25 @@ function _save_data(;
     suffix::String="",
 ) where {D,T,N}
     fct = x -> green_kernel(k, x, x0)
-    point_type = "Chebyshev-1"
 
-    data = OrderedDict("k" => k, "x0" => x0, "point-type" => "Chebyshev-1")
+    data = OrderedDict("k" => k, "x0" => x0, "point-type" => POINTTYPE)
 
-    result, precision = reference_h(sas, fct, 7, 5)
+    result, precision = reference_h(fct; sas=sas, nb_pts_cbt=15, nb_pts_max=2 * Nh)
     data["reference"] = OrderedDict(
         "value-real" => real(result), "value-imag" => imag(result), "precision" => precision
     )
 
     data["barycenter-rule"] = result_to_dict(
-        sequence_h_version(sas, src.barycenter_rule(sas), fct, Nh)
+        sequence_h_version(fct; sas=sas, cbt=src.barycenter_rule(sas), nb_pts_max=Nh)
     )
     for (i, p) in enumerate(2:6)
         data["h-version-Q$i"] = result_to_dict(
-            sequence_h_version(sas, src.compute_cubature(sas, point_type, p), fct, Nh)
+            sequence_h_version(
+                fct; sas=sas, cbt=src.compute_cubature(sas, POINTTYPE, p), nb_pts_max=Nh
+            ),
         )
     end
-    data["p-version"] = result_to_dict(sequence_p_version(sas, point_type, fct, Np))
+    data["p-version"] = result_to_dict(sequence_p_version(fct; sas=sas, nb_pts_max=Np))
 
     open("../data-convergences/$(sas.name)$suffix.toml", "w") do io
         TOML.print(io, data)
@@ -153,8 +149,8 @@ function _save_data(;
 end
 
 # ╔═╡ ef5ef526-11f9-4a6b-bce1-d21870fea3c1
-if save_data
-    for attractor in [
+if SAVEDATA
+    for sas in [
         src.vicsek_2d(1 / 3),
         src.vicsek_2d(1 / 3, π / 4),
         src.sierpinski_triangle(0.5),
@@ -163,7 +159,7 @@ if save_data
         src.cantor_dust_non_sym(),
         src.barnsley_fern(),
     ]
-        _save_data(; sas=attractor, k=5.0, x0=SVector{2}([2.0, 0.5]), Nh=2048, Np=626)
+        _save_data(; sas=sas, k=5.0, x0=SVector{2}([2.0, 0.5]), Nh=2048, Np=626)
     end
 
     _save_data(;
@@ -178,7 +174,7 @@ if save_data
         _save_data(;
             sas=src.cantor_dust(1 / 3, [-1.0, 1.0], 2),
             k=5.0,
-            x0=SVector{2}([x, 0]),
+            x0=SVector{2}([x, 0.1]),
             Nh=2048,
             Np=626,
             suffix=@sprintf("-%.2f", x)
@@ -187,24 +183,21 @@ if save_data
 end
 
 # ╔═╡ e7504b5e-edd4-49c2-8227-eaf9019bb8ee
-function compute_relative_error(seq::Vector{<:Number}, result::Number)
-    ε = eps(real(eltype(seq))) / 10
-
-    if isapprox(result, 0)
-        return abs.(seq) .+ ε
+function relative_error(result::Number, reference::Number)
+    if isapprox(reference, 0)
+        return abs(result)
     end
-
-    return abs.(seq ./ result .- 1) .+ ε
+    return abs(result / reference - 1)
 end
 
 # ╔═╡ 5d5bb600-9b89-48b3-90bc-4da6e9f48920
 function vicsek_pv()
-    fig = Figure()
+    fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(
         :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
     )
-    if add_title
+    if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for the Vicsek"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -221,7 +214,7 @@ function vicsek_pv()
         scatterlines!(
             ax,
             nb_pts,
-            compute_relative_error(val, val_ref);
+            relative_error.(val, val_ref);
             marker=m,
             linestyle=:dash,
             label=L"%$l rotation$$",
@@ -234,7 +227,7 @@ function vicsek_pv()
     limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
     axislegend(ax; position=:rt)
 
-    if save_plot
+    if SAVEPLOT
         save("2d-vicsek-pv.pdf", fig)
     end
 
@@ -246,12 +239,12 @@ vicsek_pv()
 
 # ╔═╡ 15ecd841-9e9e-4291-900c-da1f6886a005
 function vicsek_hv()
-    fig = Figure()
+    fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(
         :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
     )
-    if add_title
+    if ADDTITLE
         ax_args[:title] = L"$h$-version convergence for the Vicsek"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -270,7 +263,7 @@ function vicsek_hv()
             scatterlines!(
                 ax,
                 nb_pts,
-                compute_relative_error(val, val_ref);
+                relative_error.(val, val_ref);
                 color=k,
                 colormap=:tab10,
                 colorrange=(1, 10),
@@ -287,7 +280,7 @@ function vicsek_hv()
     limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
     axislegend(ax; position=:lb)
 
-    if save_plot
+    if SAVEPLOT
         save("2d-vicsek-hv.pdf", fig)
     end
 
@@ -298,23 +291,137 @@ end
 vicsek_hv()
 
 # ╔═╡ a0b5d444-1dec-4d63-ab09-bd3ee8e02bc3
-function sierpinski_koch_pv()
-    fig = Figure()
+function _plot_pv(name::String)
+    fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(
-        :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
+        :xlabel => L"number of cubature points$$",
+        :yscale => log10,
+        :ylabel => L"Relative error$$",
     )
-    if add_title
-        ax_args[:title] = L"$p$-version convergence for the Vicsek"
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for %$name"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
     x_min, x_max = typemax(Int), 0
-    for (name, mk, leg) in [
-        ("sierpinski-triangle", :cross, "Sierpinski triangle"),
-        ("koch-snowflake", :xcross, "Koch snowflake"),
-    ]
-        data = TOML.parsefile("../data-convergences/2d-$name.toml")
+    data = TOML.parsefile("../data-convergences/$name.toml")
+
+    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+    nb_pts = data["p-version"]["nb_pts"]
+    val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
+
+    scatterlines!(
+        ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
+    )
+
+    x_min = min(x_min, nb_pts[1])
+    x_max = max(x_max, nb_pts[end])
+
+    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
+
+    return fig
+end
+
+# ╔═╡ f281cd8d-b427-4e26-ad91-8538c6e5f744
+_plot_pv("2d-sierpinski-triangle")
+
+# ╔═╡ 84dd7bad-7797-45e4-b2e0-f8defab92759
+_plot_pv("2d-sierpinski-triangle-fat")
+
+# ╔═╡ 90b65bf1-a164-401c-92b6-5563eb768474
+_plot_pv("3d-vicsek-rot")
+
+# ╔═╡ a3b65e8e-14d6-4c0c-a4ef-a29c9695c2bd
+_plot_pv("2d-koch-snowflake")
+
+# ╔═╡ 7038e5de-a1cb-42d6-b21b-2d4f77656f62
+_plot_pv("2d-cantor-non-sym")
+
+# ╔═╡ a3b8cf1e-eb3f-403e-91ac-8d09f15b8f75
+_plot_pv("2d-barnsley-fern")
+
+# ╔═╡ 12535b8a-b083-4704-b889-db0a460120ff
+function _plot_hv(name::String)
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(
+        :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
+    )
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for %$name"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    x_min, x_max = typemax(Int), 0
+    data = TOML.parsefile("../data-convergences/$name.toml")
+
+    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+    for k in 1:5
+        name = "h-version-Q$k"
+        nb_pts = data[name]["nb_pts"]
+        val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
+
+        scatterlines!(
+            ax,
+            nb_pts,
+            relative_error.(val, val_ref);
+            color=k,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=:xcross,
+            linestyle=:dash,
+            label=L"$Q%$k$",
+        )
+
+        x_min = min(x_min, nb_pts[1])
+        x_max = max(x_max, nb_pts[end])
+    end
+
+    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
+    axislegend(ax; position=:lb)
+
+    return fig
+end
+
+# ╔═╡ 50c9daf2-7ebc-434f-a582-06c1cf6d0e4f
+_plot_hv("2d-sierpinski-triangle")
+
+# ╔═╡ 95cbcb72-0fda-48b2-8355-081f4c38f5b6
+_plot_hv("2d-sierpinski-triangle-fat")
+
+# ╔═╡ 2876ac50-8d20-4e82-8684-f9f626952fa0
+_plot_hv("3d-vicsek-rot")
+
+# ╔═╡ 732a6a47-ede0-432f-bbf6-dbf8cd11f40d
+_plot_hv("2d-koch-snowflake")
+
+# ╔═╡ e4d4001a-dc17-413e-b118-e0317c170a0d
+_plot_hv("2d-cantor-non-sym")
+
+# ╔═╡ c3af3f2b-b49a-45eb-9db3-37d674f1a48c
+_plot_hv("2d-barnsley-fern")
+
+# ╔═╡ bf9d9043-4c1c-4b82-926d-a3ee7aa0574f
+function cantor_dust_sing_pv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(
+        :xlabel => L"number of cubature points$$",
+        :yscale => log10,
+        :ylabel => L"Relative error$$",
+    )
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    x_min, x_max = typemax(Int), 0
+    for (i, x) in enumerate([2.0, 1.5, 1.25, 1.0, 0.0])
+        filename = "2d-cantor-dust-$(@sprintf("%.2f", x))"
+        data = TOML.parsefile("../data-convergences/$filename.toml")
 
         val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
 
@@ -324,10 +431,13 @@ function sierpinski_koch_pv()
         scatterlines!(
             ax,
             nb_pts,
-            compute_relative_error(val, val_ref);
-            marker=mk,
+            relative_error.(val, val_ref);
+            color=i,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=:xcross,
             linestyle=:dash,
-            label=L"%$leg$$",
+            label=L"x = %$x",
         )
 
         x_min = min(x_min, nb_pts[1])
@@ -335,73 +445,61 @@ function sierpinski_koch_pv()
     end
 
     limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
-    axislegend(ax; position=:rt)
-
-    if save_plot
-        save("2d-sierpinski-koch-pv.pdf", fig)
-    end
+    axislegend(ax; position=:lb)
 
     return fig
 end
 
-# ╔═╡ 7bd6dcf2-71b8-4cf4-b043-3c101a327e08
-sierpinski_koch_pv()
+# ╔═╡ 77fe701f-f2ce-408b-a785-bb9acee6a54a
+cantor_dust_sing_pv()
 
-# ╔═╡ 12535b8a-b083-4704-b889-db0a460120ff
-function sierpinski_koch_hv()
-    fig = Figure()
+# ╔═╡ d1814922-76e9-4469-93f9-42c2a27bf98b
+function cantor_dust_sing_hv(k::Int)
+    fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(
         :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
     )
-    if add_title
-        ax_args[:title] = L"$p$-version convergence for the Vicsek"
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
     x_min, x_max = typemax(Int), 0
-    for (name, mk, ls, leg) in [
-        ("sierpinski-triangle", :cross, :dash, "Sierpinski triangle"),
-        ("koch-snowflake", :xcross, :dot, "Koch snowflake"),
-    ]
-        data = TOML.parsefile("../data-convergences/2d-$name.toml")
+    for (i, x) in enumerate([2.0, 1.5, 1.25, 1.0, 0.0])
+        filename = "2d-cantor-dust-$(@sprintf("%.2f", x))"
+        data = TOML.parsefile("../data-convergences/$filename.toml")
 
         val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
 
-        for k in 1:5
-            name = "h-version-Q$k"
-            nb_pts = data[name]["nb_pts"]
-            val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
+        name = "h-version-Q$k"
+        nb_pts = data[name]["nb_pts"]
+        val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
 
-            scatterlines!(
-                ax,
-                nb_pts,
-                compute_relative_error(val, val_ref);
-                color=k,
-                colormap=:tab10,
-                colorrange=(1, 10),
-                marker=mk,
-                linestyle=ls,
-                label=L"$Q%$k$ %$leg",
-            )
+        scatterlines!(
+            ax,
+            nb_pts,
+            relative_error.(val, val_ref);
+            color=i,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=:xcross,
+            linestyle=:dash,
+            label=L"$Q%$k$ for $x = %$x$",
+        )
 
-            x_min = min(x_min, nb_pts[1])
-            x_max = max(x_max, nb_pts[end])
-        end
+        x_min = min(x_min, nb_pts[1])
+        x_max = max(x_max, nb_pts[end])
     end
 
     limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
     axislegend(ax; position=:lb)
 
-    if save_plot
-        save("2d-sierpinski-koch-hv.pdf", fig)
-    end
-
     return fig
 end
 
-# ╔═╡ 50c9daf2-7ebc-434f-a582-06c1cf6d0e4f
-sierpinski_koch_hv()
+# ╔═╡ fef04d01-a9bf-4cef-9bc3-a3cacd92d49d
+cantor_dust_sing_hv(4)
 
 # ╔═╡ Cell order:
 # ╠═fe657a18-63c0-11ef-0959-15170cb4d30a
@@ -412,9 +510,23 @@ sierpinski_koch_hv()
 # ╠═15ecd841-9e9e-4291-900c-da1f6886a005
 # ╠═9356d11c-bf4c-4960-90e6-b787ed55a3e4
 # ╠═a0b5d444-1dec-4d63-ab09-bd3ee8e02bc3
-# ╠═7bd6dcf2-71b8-4cf4-b043-3c101a327e08
 # ╠═12535b8a-b083-4704-b889-db0a460120ff
+# ╠═f281cd8d-b427-4e26-ad91-8538c6e5f744
 # ╠═50c9daf2-7ebc-434f-a582-06c1cf6d0e4f
+# ╠═84dd7bad-7797-45e4-b2e0-f8defab92759
+# ╠═95cbcb72-0fda-48b2-8355-081f4c38f5b6
+# ╠═90b65bf1-a164-401c-92b6-5563eb768474
+# ╠═2876ac50-8d20-4e82-8684-f9f626952fa0
+# ╠═a3b65e8e-14d6-4c0c-a4ef-a29c9695c2bd
+# ╠═732a6a47-ede0-432f-bbf6-dbf8cd11f40d
+# ╠═7038e5de-a1cb-42d6-b21b-2d4f77656f62
+# ╠═e4d4001a-dc17-413e-b118-e0317c170a0d
+# ╠═a3b8cf1e-eb3f-403e-91ac-8d09f15b8f75
+# ╠═c3af3f2b-b49a-45eb-9db3-37d674f1a48c
+# ╠═bf9d9043-4c1c-4b82-926d-a3ee7aa0574f
+# ╠═77fe701f-f2ce-408b-a785-bb9acee6a54a
+# ╠═d1814922-76e9-4469-93f9-42c2a27bf98b
+# ╠═fef04d01-a9bf-4cef-9bc3-a3cacd92d49d
 # ╠═b8fdbae2-445d-444f-8561-3fc953a84983
 # ╠═252907f1-b344-4466-8f1a-8ff7ea94d7f7
 # ╠═f40a28d9-7577-4632-94b7-a617d91c1184

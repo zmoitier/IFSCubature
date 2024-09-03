@@ -1,72 +1,67 @@
 struct Cubature{D,T}
     points::Vector{SVector{D,T}}
     weights::Vector{T}
-    h::T
-end
 
-function Cubature(
-    points::Vector{T}, weights::Vector{<:Real}, h::Real
-) where {T<:Union{Real,Vector{<:Real}}}
-    @assert length(points) == length(weights) "The length of points and weights must be the same."
-    @assert isapprox(sum(weights), 1) "the sum of the weights must = 1."
-
-    S = eltype(weights)
-
-    if eltype(points) <: Real
-        D = 1
-        pts = [SVector{1,S}(p) for p in points]
-    else
-        @assert allequal(length.(points)) "All points must have the same length."
-        D = length(points[1])
-        pts = [SVector{D,S}(p) for p in points]
+    function Cubature(points::Vector{SVector{D,T}}, weights::Vector{T}) where {D,T}
+        @assert length(points) == length(weights) "The number of points and weights must be the same."
+        return new{D,T}(points, weights)
     end
-
-    return Cubature{D,S}(pts, weights, h)
 end
 
 length(cbt::Cubature{D,T}) where {D,T} = length(cbt.weights)
 
-function integral(fct::Function, cbt::Cubature{D,T}) where {D,T}
+function (cbt::Cubature{D,T})(fct::Function) where {D,T}
     return sum(cbt.weights .* fct.(cbt.points))
 end
 
-function integral(fct::Function, cbts::Vector{Cubature{D,T}}) where {D,T}
+mutable struct HCubature{D,T}
+    heap::BinaryHeap{Tuple{Cubature{D,T},T}} # [ (Cubature, diameter) ]
+
+    function HCubature(cbt::Cubature{D,T}, diameter::T) where {D,T}
+        return new{D,T}(
+            BinaryHeap{Tuple{Cubature{D,T},T}}(Base.Order.By(e -> -e[2]), [(cbt, diameter)])
+        )
+    end
+end
+
+function length(hcbt::HCubature{D,T}) where {D,T}
+    return length(first(hcbt.heap)[1]) * length(hcbt.heap.valtree)
+end
+
+function diameter(hcbt::HCubature{D,T}) where {D,T}
+    return first(hcbt.heap)[2]
+end
+
+function (hcbt::HCubature{D,T})(fct::Function) where {D,T}
     s = 0
-    for i in length(cbts):-1:1
-        s += integral(fct, cbts[i])
+    for i in length(hcbt.heap.valtree):-1:1
+        s += hcbt.heap.valtree[i][1](fct)
     end
     return s
 end
 
-function refine!(cbts::Vector{Cubature{D,T}}, sas::SelfAffineSet{D,T,N}) where {D,T,N}
-    n = length(cbts)
-    for (i, cbt) in enumerate(cbts)
-        if !(cbt.h ≈ cbts[1].h)
-            n = i
-        end
+function refine!(hcbt::HCubature{D,T}, sas::SelfAffineSet{D,T,N}) where {D,T,N}
+    to_refine = [pop!(hcbt.heap)]
+    while !isempty(hcbt.heap) && isapprox(first(hcbt.heap)[2], to_refine[1][2])
+        push!(to_refine, pop!(hcbt.heap))
     end
 
-    for _ in 1:n
-        cbt = popfirst!(cbts)
-        for cbt_ref in [
-            Cubature{D,T}(S.(cbt.points), μ .* cbt.weights, S.ρ * cbt.h) for
-            (S, μ) in zip(sas.ifs, sas.measure)
-        ]
-            i = searchsortedlast(cbts, cbt_ref; lt=(a, b) -> a.h < b.h, rev=true)
-            insert!(cbts, i + 1, cbt_ref)
+    for (cbt, h) in to_refine
+        for (S, μ) in zip(sas.ifs, sas.measure)
+            push!(hcbt.heap, (Cubature(S.(cbt.points), μ .* cbt.weights), h * S.ρ))
         end
     end
 
     return nothing
 end
 
-function barycenter_rule(sas::SelfAffineSet{D,T,N}) where {D,T<:Real,N}
+function barycenter_rule(sas::SelfAffineSet{D,T,N}) where {D,T,N}
     A = sum([μ .* S.A for (S, μ) in zip(sas.ifs, sas.measure)])
     b = sum([μ .* S.b for (S, μ) in zip(sas.ifs, sas.measure)])
 
     x0 = (I - A) \ b
 
-    return Cubature{D,T}([x0], [T(1)], sas.bounding_ball.radius)
+    return Cubature([x0], [T(1)])
 end
 
 function get_points(type_points::String, nb_points::Int)
@@ -209,5 +204,5 @@ function compute_cubature(
     weights /= sum(weights)
 
     @assert isapprox(sum(weights), 1) "the sum of the weights must = 1."
-    return Cubature{D,T}(points, weights, sas.bounding_ball.radius)
+    return Cubature(points, weights)
 end

@@ -22,10 +22,10 @@ function cantor_dust(
         push!(ifs, contractive_similarity(contraction_factor, [v for v in c]))
     end
 
-    b_ball = hyper_ball(
+    ball = hyper_ball(
         fill((fix_pts[end] + fix_pts[1]) / 2, D), √D * (fix_pts[end] - fix_pts[1]) / 2
     )
-    b_box = hyper_box(
+    box = hyper_box(
         fill((fix_pts[end] + fix_pts[1]) / 2, D),
         Matrix(Diagonal(fill((fix_pts[end] - fix_pts[1]) / 2, D))),
     )
@@ -34,5 +34,5 @@ function cantor_dust(
         name = "$(space_dim)d-cantor-dust"
     end
 
-    return SelfAffineSet(ifs, fill(T(1//L^D), L^D), b_ball, b_box, name)
+    return SelfAffineSet(ifs, fill(T(1//L^D), L^D), ball, box, name)
 end
