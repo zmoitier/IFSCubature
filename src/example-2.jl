@@ -256,8 +256,8 @@ function cantor_dust_non_sym()
         box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
     end
 
-    d = dimension(ifs)
-    measure = [S.ρ for S in ifs] .^ d[2]
+    d = similarity_dimension(ifs)
+    measure = [opnorm(S.A) for S in ifs] .^ d
 
     return SelfAffineSet(ifs, measure, ball, box, "2d-cantor-non-sym")
 end
@@ -277,8 +277,9 @@ function barnsley_fern()
         box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
     end
 
-    d = dimension(ifs)[1]
-    measure = [svdvals(S.A)[end] for S in ifs] .^ d
+    # d = dimension(ifs)[1]
+    # measure = [svdvals(S.A)[end] for S in ifs] .^ d
+    measure = [0.5, 0.1, 0.2, 0.2]
 
     return SelfAffineSet(ifs, measure, ball, box, "2d-barnsley-fern")
 end

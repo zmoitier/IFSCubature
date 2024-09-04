@@ -13,7 +13,7 @@ struct SelfAffineSet{D,T,N}
         name::String,
     ) where {D,T,N}
         @assert length(ifs) == length(measure) "length(ifs) == length(measure)"
-        @assert all(all(S.ρ < 1) for S in ifs) "The matrices `A` must be contrations."
+        @assert all(all(opnorm(S.A) < 1) for S in ifs) "The matrices `A` must be contrations."
         @assert all(0 .≤ measure .< 1) "The measure weights must be in the interval (0, 1)."
         @assert sum(measure) ≈ 1 "The measure weights must sum to 1."
 
@@ -22,7 +22,7 @@ struct SelfAffineSet{D,T,N}
 end
 
 function contractive_similarity(
-    factor::Real, matrix::Matrix{<:Real}, fix_point::AbstractVector{<:Real}
+    factor::Real, matrix::AbstractMatrix, fix_point::AbstractVector
 )
     @assert 0 ≤ factor < 1 "0 ≤ factor=$factor < 1."
     @assert isapprox(matrix' * matrix, I) "$matrix must be an orthogonal matrix."
@@ -33,14 +33,9 @@ function contractive_similarity(
     return affine_map(A, b)
 end
 
-function contractive_similarity(factor::Real, fix_point::AbstractVector{<:Real})
-    @assert 0 ≤ factor < 1 "0 ≤ factor=$factor < 1."
-
+function contractive_similarity(factor::Real, fix_point::AbstractVector)
     D = length(fix_point)
-    A = factor .* Matrix(I, D, D)
-    b = (I - A) * fix_point
-
-    return affine_map(A, b)
+    return contractive_similarity(factor, Matrix(I, D, D), fix_point)
 end
 
 function fix_point(f::AffineMap{D,T,N}) where {D,T,N}
@@ -50,15 +45,12 @@ end
 function smallest_radius(
     z::AbstractVector, ifs::Vector{AffineMap{D,T,N}}, p::Real=2
 ) where {D,T,N}
-    if p ≈ 2
-        return maximum(norm(S(z) - z, p) / (1 - S.ρ) for S in ifs)
-    end
     return maximum(norm(S(z) - z, p) / (1 - opnorm(S.A, p)) for S in ifs)
 end
 
 """Return the smallest bounding ball."""
 function bounding_ball(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    fs = 1 ./ (1 .- [S.ρ for S in ifs])
+    fs = 1 ./ (1 .- [opnorm(S.A) for S in ifs])
 
     x0 = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
     res = Optim.optimize(z -> _smallest_radius(z, ifs, fs, 2), x0)
@@ -88,11 +80,6 @@ function _smallest_radius(
     return maximum(f * norm(S(z) - z, p) for (S, f) in zip(ifs, fs))
 end
 
-function similarity_dimension(ρ::Vector)
-    bracket = (-log(length(ρ))) ./ log.(extrema(ρ))
-    return find_zero(d -> sum(ρ .^ d) .- 1, bracket, Brent())
-end
-
 function dimension(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
     η, ρ = zeros(T, length(ifs)), zeros(T, length(ifs))
     for (i, S) in enumerate(ifs)
@@ -100,5 +87,14 @@ function dimension(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
         η[i], ρ[i] = σ[end], σ[1]
     end
 
-    return (similarity_dimension(η), similarity_dimension(ρ))
+    return (_similarity_dimension(η), _similarity_dimension(ρ))
+end
+
+function similarity_dimension(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
+    return _similarity_dimension([opnorm(S.A) for S in ifs])
+end
+
+function _similarity_dimension(ρ::Vector)
+    bracket = (-log(length(ρ))) ./ log.(extrema(ρ))
+    return find_zero(d -> sum(ρ .^ d) .- 1, bracket, Brent())
 end

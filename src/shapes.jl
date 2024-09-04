@@ -21,7 +21,7 @@ function hyper_ball(center::T, radius::T) where {T}
 end
 
 function (f::AffineMap{D,T,N})(hb::HyperBall{D,T}) where {D,T,N}
-    return HyperBall{D,T}(f(hb.center), hb.radius * f.ρ)
+    return HyperBall{D,T}(f(hb.center), hb.radius * opnorm(f.A))
 end
 
 struct HyperBox{D,T,N}

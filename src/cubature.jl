@@ -14,41 +14,51 @@ function (cbt::Cubature{D,T})(fct::Function) where {D,T}
     return sum(cbt.weights .* fct.(cbt.points))
 end
 
-mutable struct HCubature{D,T}
-    heap::BinaryHeap{Tuple{Cubature{D,T},T}} # [ (Cubature, diameter) ]
+mutable struct HCubature{D,T,N}
+    cbt::Cubature{D,T}
+    heap::BinaryHeap{Tuple{T,AffineMap{D,T,N},T}} # [ (ρ_w diam Γ, S_w, μ_w) ]
 
-    function HCubature(cbt::Cubature{D,T}, diameter::T) where {D,T}
-        return new{D,T}(
-            BinaryHeap{Tuple{Cubature{D,T},T}}(Base.Order.By(e -> -e[2]), [(cbt, diameter)])
+    function HCubature(cbt::Cubature{D,T}, sas::SelfAffineSet{D,T,N}) where {D,T,N}
+        return new{D,T,N}(
+            cbt,
+            BinaryHeap{Tuple{T,AffineMap{D,T,N},T}}(
+                Base.Order.By(e -> -e[1]),
+                [(
+                    2 * sas.bounding_ball.radius,
+                    AffineMap(SMatrix{D,D,T,N}(I), SVector{D,T}(zeros(D))),
+                    one(T),
+                )],
+            ),
         )
     end
 end
 
-function length(hcbt::HCubature{D,T}) where {D,T}
-    return length(first(hcbt.heap)[1]) * length(hcbt.heap.valtree)
+function length(hcbt::HCubature{D,T,N}) where {D,T,N}
+    return length(hcbt.cbt) * length(hcbt.heap.valtree)
 end
 
-function diameter(hcbt::HCubature{D,T}) where {D,T}
-    return first(hcbt.heap)[2]
+function diameter(hcbt::HCubature{D,T,N}) where {D,T,N}
+    return first(hcbt.heap)[1]
 end
 
-function (hcbt::HCubature{D,T})(fct::Function) where {D,T}
+function (hcbt::HCubature{D,T,N})(fct::Function) where {D,T,N}
     s = 0
-    for i in length(hcbt.heap.valtree):-1:1
-        s += hcbt.heap.valtree[i][1](fct)
+    for (_, S, μ) in hcbt.heap.valtree
+        s += μ * sum(hcbt.cbt.weights .* fct.(S.(hcbt.cbt.points)))
     end
     return s
 end
 
-function refine!(hcbt::HCubature{D,T}, sas::SelfAffineSet{D,T,N}) where {D,T,N}
+function refine!(hcbt::HCubature{D,T,N}, sas::SelfAffineSet{D,T,N}) where {D,T,N}
     to_refine = [pop!(hcbt.heap)]
-    while !isempty(hcbt.heap) && isapprox(first(hcbt.heap)[2], to_refine[1][2])
+    while !isempty(hcbt.heap) && isapprox(first(hcbt.heap)[1], to_refine[1][1])
         push!(to_refine, pop!(hcbt.heap))
     end
 
-    for (cbt, h) in to_refine
+    for (hw, Sw, μw) in to_refine
         for (S, μ) in zip(sas.ifs, sas.measure)
-            push!(hcbt.heap, (Cubature(S.(cbt.points), μ .* cbt.weights), h * S.ρ))
+            V = Sw ∘ S
+            push!(hcbt.heap, (opnorm(S.A) * hw, V, μw * μ))
         end
     end
 

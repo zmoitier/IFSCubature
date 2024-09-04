@@ -20,54 +20,54 @@ function reference_p(
     fct::Function; sas::src.SelfAffineSet{D,T,N}, nb_pts_cbt::Int
 ) where {D,T,N}
     cbt1 = src.compute_cubature(sas, "Chebyshev-1", nb_pts_cbt; maxiter=MAXITER)
-    cbt2 = src.compute_cubature(sas, "Gauss-Legendre", nb_pts_cbt - 2; maxiter=MAXITER)
+    cbt2 = src.compute_cubature(sas, "Gauss-Legendre", nb_pts_cbt ÷ 2; maxiter=MAXITER)
 
     r1, r2 = cbt1(fct), cbt2(fct)
 
-    r = (r1 + r2) / 2
-    if isapprox(r, 0)
-        return (r, abs(r1 - r2))
+    if isapprox(r1, 0)
+        return (r1, abs(r1 - r2))
     end
-    return (r, abs((r1 - r2) / r))
+    return (r1, abs(r2 / r1 - 1))
 end
 
 function reference_h(
-    fct::Function; sas::src.SelfAffineSet{D,T,N}, nb_pts_cbt::Int, nb_pts_max::Int
+    fct::Function; sas::src.SelfAffineSet{D,T,N}, nb_pts_cbt::Int, f_diam::T
 ) where {D,T,N}
-    diam = 2 * sas.bounding_ball.radius
-    hcbt1 = src.HCubature(src.compute_cubature(sas, "Chebyshev-1", nb_pts_cbt), diam)
-    hcbt2 = src.HCubature(src.compute_cubature(sas, "Gauss-Legendre", nb_pts_cbt - 2), diam)
+    hcbt1 = src.HCubature(src.compute_cubature(sas, "Chebyshev-1", nb_pts_cbt), sas)
+    hcbt2 = src.HCubature(src.compute_cubature(sas, "Gauss-Legendre", nb_pts_cbt ÷ 2), sas)
 
-    while length(hcbt1) < nb_pts_max
+    d = 2 * sas.bounding_ball.radius * f_diam
+    while src.diameter(hcbt1) > d
         src.refine!(hcbt1, sas)
         src.refine!(hcbt2, sas)
     end
     r1, r2 = hcbt1(fct), hcbt2(fct)
 
-    r = (r1 + r2) / 2
-    if isapprox(r, 0)
-        return (r, abs(r1 - r2))
+    if isapprox(r1, 0)
+        return (r1, abs(r1 - r2))
     end
-    return (r, abs((r1 - r2) / r))
+    return (r1, abs(r2 / r1 - 1))
 end
 
 function sequence_h_version(
-    fct::Function; sas::src.SelfAffineSet{D,T,N}, cbt::src.Cubature{D,T}, nb_pts_max::Int
+    fct::Function; sas::src.SelfAffineSet{D,T,N}, cbt::src.Cubature{D,T}, f_diam::T
 ) where {D,T,N}
-    hcbt = src.HCubature(cbt, 2 * sas.bounding_ball.radius)
+    hcbt = src.HCubature(cbt, sas)
 
-    nb_pts = [length(cbt)]
-    values = [cbt(fct)]
-    while length(hcbt) < nb_pts_max
+    nb_pts = [length(hcbt)]
+    mesh_size = [src.diameter(hcbt)]
+    values = [hcbt(fct)]
+
+    d = 2 * sas.bounding_ball.radius * f_diam
+    while src.diameter(hcbt) > d
         src.refine!(hcbt, sas)
 
-        println([h for (_, h) in hcbt.heap.valtree])
-
         push!(nb_pts, length(hcbt))
+        push!(mesh_size, src.diameter(hcbt))
         push!(values, hcbt(fct))
     end
 
-    return (nb_pts, values)
+    return (nb_pts, mesh_size, values)
 end
 
 function sequence_p_version(
@@ -88,41 +88,36 @@ function sequence_p_version(
         p += 1
     end
 
-    return (nb_pts, values)
+    return (nb_pts, [2 * sas.bounding_ball.radius], values)
 end
 
 function result_to_dict(result)
-    n = result[1]
-    v = result[2]
-
-    return OrderedDict("nb_pts" => n, "values-real" => real.(v), "values-imag" => imag.(v))
+    return OrderedDict(
+        "nb_pts" => result[1],
+        "mesh-size" => result[2],
+        "values-real" => real.(result[3]),
+        "values-imag" => imag.(result[3]),
+    )
 end
 
 function _save_data(;
-    sas::src.SelfAffineSet{D,T,N},
-    k::Real,
-    x0::SVector{D,T},
-    Nh::Int,
-    Np::Int,
-    suffix::String="",
+    sas::src.SelfAffineSet{D,T,N}, k::Real, x0::SVector{D,T}, Np::Int, suffix::String=""
 ) where {D,T,N}
     fct = x -> green_kernel(k, x, x0)
 
     data = OrderedDict("k" => k, "x0" => x0, "point-type" => POINTTYPE)
 
-    result, precision = reference_h(fct; sas=sas, nb_pts_cbt=15, nb_pts_max=2 * Nh)
+    result, precision = reference_h(fct; sas=sas, nb_pts_cbt=15)
     data["reference"] = OrderedDict(
         "value-real" => real(result), "value-imag" => imag(result), "precision" => precision
     )
 
     data["barycenter-rule"] = result_to_dict(
-        sequence_h_version(fct; sas=sas, cbt=src.barycenter_rule(sas), nb_pts_max=Nh)
+        sequence_h_version(fct; sas=sas, cbt=src.barycenter_rule(sas))
     )
     for (i, p) in enumerate(2:6)
         data["h-version-Q$i"] = result_to_dict(
-            sequence_h_version(
-                fct; sas=sas, cbt=src.compute_cubature(sas, POINTTYPE, p), nb_pts_max=Nh
-            ),
+            sequence_h_version(fct; sas=sas, cbt=src.compute_cubature(sas, POINTTYPE, p))
         )
     end
     data["p-version"] = result_to_dict(sequence_p_version(fct; sas=sas, nb_pts_max=Np))
@@ -178,10 +173,13 @@ function _plot_hv(name::String)
     fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(
-        :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
+        :xscale => log10,
+        :xlabel => L"mesh size$$",
+        :yscale => log10,
+        :ylabel => L"Relative error$$",
     )
     if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for %$name"
+        ax_args[:title] = L"$h$-version convergence for %$name"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
@@ -192,12 +190,13 @@ function _plot_hv(name::String)
 
     for k in 1:5
         name = "h-version-Q$k"
-        nb_pts = data[name]["nb_pts"]
+        # nb_pts = data[name]["nb_pts"]
+        mesh_size = data[name]["mesh-size"]
         val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
 
         scatterlines!(
             ax,
-            nb_pts,
+            mesh_size,
             relative_error.(val, val_ref);
             color=k,
             colormap=:tab10,
@@ -207,12 +206,12 @@ function _plot_hv(name::String)
             label=L"$Q%$k$",
         )
 
-        x_min = min(x_min, nb_pts[1])
-        x_max = max(x_max, nb_pts[end])
+        x_min = min(x_min, mesh_size[end])
+        x_max = max(x_max, mesh_size[1])
     end
 
     limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
-    axislegend(ax; position=:lb)
+    axislegend(ax; position=:rb)
 
     return fig
 end
@@ -229,26 +228,43 @@ function cantor_dust_test()
     return src.SelfAffineSet(ifs, fill(1 / 4, 4), ball, box, "2d-cantor-dust-test")
 end
 
-sas = cantor_dust_test()
+# sas = src.cantor_set([0.5, 0.5], [-1.0, 1.0], [0.5, 0.5])
 # sas = src.koch_snowflake()
+# sas = cantor_dust_test()
 # sas = src.cantor_dust_non_sym()
-# sas = src.barnsley_fern()
+sas = src.barnsley_fern()
 
 k = 5.0
 x0 = SVector{2}([2.0, 0.5])
-fct = x -> green_kernel(k, x, x0)
+# fct = x -> green_kernel(k, x, x0)
+fct = x -> x[1]^4
+# function fct(x)
+#     if x[1] < 0.36
+#         return 1.0
+#     end
+#     return 0.0
+# end
 
-# _save_data(; sas=sas, k=5.0, x0=SVector{2}([2.0, 0.5]), Nh=2048, Np=626)
+# _save_data(; sas=sas, k=5.0, x0=SVector{2}([2.0, 0.5]), Np=626)
 
-display(_plot_pv(sas.name))
-display(_plot_hv(sas.name))
+# display(_plot_pv(sas.name))
+# display(_plot_hv(sas.name))
 
-# reference_h(fct; sas=sas, nb_pts_cbt=15, nb_pts_max=2048)
-# reference_p(fct; sas=sas, nb_pts_cbt=32)
+println("------------------------------------------")
+v_ref, prec = reference_p(fct; sas=sas, nb_pts_cbt=32)
+println((v_ref, prec))
+# reference_h(fct; sas=sas, nb_pts_cbt=15)
 
-# sequence_h_version(
-#     fct;
-#     sas=sas,
-#     cbt=src.compute_cubature(sas, POINTTYPE, 2; maxiter=MAXITER),
-#     nb_pts_max=1024,
-# )
+cbt = src.compute_cubature(sas, "Chebyshev-1", 3; maxiter=MAXITER)
+n, h, v = sequence_h_version(fct; sas=sas, cbt=cbt)
+
+fig = Figure()
+ax = Axis(fig[1, 1]; xscale=log10, yscale=log10)
+
+# for a in 1:4
+lines!(h, h .^ 3; color=:black, linestyle=:dash)
+# end
+
+scatterlines!(ax, h, abs.(v .- v_ref))
+
+fig

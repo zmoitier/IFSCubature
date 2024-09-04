@@ -1,28 +1,23 @@
 struct AffineMap{D,T,N}
     A::SMatrix{D,D,T,N}
     b::SVector{D,T}
-    ρ::T
-
-    function AffineMap(A::SMatrix{D,D,T,N}, b::SVector{D,T}) where {D,T,N}
-        return new{D,T,N}(A, b, opnorm(A))
-    end
 end
 
 function affine_map(
-    A::AbstractMatrix{<:Real}, b::AbstractVector{<:Real}, T::Union{DataType,Nothing}=nothing
+    A::AbstractMatrix, b::AbstractVector, T::Union{DataType,Nothing}=nothing
 )
-    D, n = size(A)
-    @assert n == D "The matrix `A` must be a square matrix."
-
-    m = length(b)
-    @assert m == D "The vector `b` must have length $D."
+    D = length(b)
+    @assert all(x == D for x in size(A)) "The matrix `A` must be a $Dx$D matrix."
 
     if isnothing(T)
         T = typeof(zero(eltype(A)) + zero(eltype(b)))
     end
 
-    N = D * D
-    return AffineMap(SMatrix{D,D,T,N}(A), SVector{D,T}(b))
+    return AffineMap(SMatrix{D,D,T,D * D}(A), SVector{D,T}(b))
+end
+
+function ∘(f::AffineMap{D,T,N}, g::AffineMap{D,T,N}) where {D,T,N}
+    return AffineMap(f.A * g.A, f.A * g.b + f.b)
 end
 
 function (f::AffineMap{1,T,1})(x::T)::T where {T}
@@ -51,7 +46,7 @@ function affine_transform_from_x_to_y(
     S = Y / X
 
     N = D * D
-    return AffineMap{D,T,N}(SMatrix{D,D,T,N}(S[:, 1:D]), SVector{D,T}(S[:, K]))
+    return AffineMap(SMatrix{D,D,T,N}(S[:, 1:D]), SVector{D,T}(S[:, K]))
 end
 
 """The 2d rotation matrix of angle `angle`."""
