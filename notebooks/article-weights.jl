@@ -30,25 +30,22 @@ begin
     const SAVEDATA = false # take some time
 
     #! Ploting constants
-    const ADDTITLE = false
-    const SAVEPLOT = true
+    const ADDTITLE = true
+    const SAVEPLOT = false
     const FONTSIZE = 20
 
     "Global parameters"
 end
 
 # ╔═╡ f788e3a3-181f-4676-9463-ed5b53e47223
-function _save_weights(sas::src.SelfAffineSet, M_max::Int, suffix::String)
-    filename = sas.name
-    if !isnothing(suffix)
-        filename = filename * suffix
-    end
+function _save_weights(sas::src.SelfAffineSet, nb_pts_max::Int, suffix::String="")
+    filename = sas.name * suffix
 
     open("../data-weights/$filename.csv", "w") do file
         write(file, "nb-points,sum-abs\n")
         write(file, "1,$(@sprintf("%.16e", 1))\n")
 
-        for M in 2:M_max
+        for M in 2:nb_pts_max
             cbt = src.compute_cubature(sas, POINTTYPE, M; maxiter=MAXITER)
 
             n = @sprintf("%d", length(cbt))
@@ -78,9 +75,9 @@ if SAVEDATA
 end
 
 # ╔═╡ 00cf0514-7931-4d7e-a523-ae918eac6de3
-function cantor_set_weights(M::Int)
+function cantor_set_weights(nb_pts::Int)
     sas = src.cantor_set(1 / 3, [0.0, 1.0])
-    cbt = src.compute_cubature(sas, POINTTYPE, M; maxiter=MAXITER)
+    cbt = src.compute_cubature(sas, POINTTYPE, nb_pts; maxiter=MAXITER)
     w_lim = extrema(cbt.weights)
     W = maximum(abs.(w_lim))
 
@@ -95,9 +92,11 @@ function cantor_set_weights(M::Int)
 
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict() # :xlabel => L"x", :ylabel => L"w"
+    ax_args::Dict{Symbol,Any} = Dict()
     if ADDTITLE
         ax_args[:title] = L"Cantor set with $\rho=1/3$ and $ M = %$M $"
+        ax_args[:xlabel] = L"x"
+        ax_args[:ylabel] = L"w"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
@@ -133,9 +132,9 @@ end
 cantor_set_weights(255)
 
 # ╔═╡ ef2380b5-1ac8-43a7-be6c-b50d29608af5
-function vicsek_weights(M::Int)
-    attractor = src.vicsek_2d(1 / 3, 0.4)
-    cbt = src.compute_cubature(attractor, POINTTYPE, M; maxiter=MAXITER)
+function vicsek_weights(nb_pts::Int)
+    sas = src.vicsek_2d(1 / 3, 0.4)
+    cbt = src.compute_cubature(sas, POINTTYPE, nb_pts; maxiter=MAXITER)
     W = maximum(abs.(cbt.weights))
 
     pf = [[
@@ -145,14 +144,17 @@ function vicsek_weights(M::Int)
         SVector{2,Float64}([-1, 1]),
     ]]
     for _ in 1:5
-        pf = [S.(part) for S in attractor.ifs for part in pf]
+        pf = [S.(part) for S in sas.ifs for part in pf]
     end
 
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:aspect => 1) # :xlabel => L"x", :ylabel => L"y",
+    ax_args::Dict{Symbol,Any} = Dict(:aspect => 1)
     if ADDTITLE
-        ax_args[:title] = L"Vicsek with $\rho=1/3$ and $ M = %$(M*M) $"
+        M2 = nb_pts * nb_pts
+        ax_args[:title] = L"Vicsek with $\rho=1/3$ and $ M = %$M2 $"
+        ax_args[:xlabel] = L"x"
+        ax_args[:ylabel] = L"y"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
@@ -173,7 +175,11 @@ function vicsek_weights(M::Int)
         strokecolor=:black,
     )
 
-    Colorbar(fig[1, 2], sc) # label=L"w"
+    if ADDTITLE
+        Colorbar(fig[1, 2], sc; label=L"w")
+    else
+        Colorbar(fig[1, 2], sc)
+    end
 
     if SAVEPLOT
         save("2d-vicsek-weights.pdf", fig)
@@ -189,9 +195,10 @@ vicsek_weights(10)
 function cantor_set_sum_weights()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M") # :ylabel => L"|\mathbf{w}|_1"
+    ax_args::Dict{Symbol,Any} = Dict(:xlabel => L"M")
     if ADDTITLE
         ax_args[:title] = L"Sum of the absolute value of the weight for Cantor set$$"
+        ax_args[:ylabel] = L"|\mathbf{w}|_1"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
@@ -231,9 +238,10 @@ cantor_set_sum_weights()
 function vicsek_sum_weights()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M") # :ylabel => L"|\mathbf{w}|_1"
+    ax_args::Dict{Symbol,Any} = Dict(:xlabel => L"M")
     if ADDTITLE
         ax_args[:title] = L"Sum of the absolute value of the weight for Vicsek$$"
+        ax_args[:ylabel] = L"|\mathbf{w}|_1"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 

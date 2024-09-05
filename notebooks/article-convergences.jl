@@ -62,8 +62,12 @@ end
 function reference_h(
     fct::Function; sas::src.SelfAffineSet{D,T,N}, nb_pts_cbt::Int, f_diam::T
 ) where {D,T,N}
-    hcbt1 = src.HCubature(src.compute_cubature(sas, "Chebyshev-1", nb_pts_cbt), sas)
-    hcbt2 = src.HCubature(src.compute_cubature(sas, "Gauss-Legendre", nb_pts_cbt ÷ 2), sas)
+    hcbt1 = src.HCubature(
+        src.compute_cubature(sas, "Chebyshev-1", nb_pts_cbt; maxiter=MAXITER), sas
+    )
+    hcbt2 = src.HCubature(
+        src.compute_cubature(sas, "Gauss-Legendre", nb_pts_cbt ÷ 2; maxiter=MAXITER), sas
+    )
 
     d = 2 * sas.bounding_ball.radius * f_diam
     while src.diameter(hcbt1) > d
@@ -156,7 +160,10 @@ function _save_data(;
     for (i, p) in enumerate(2:6)
         data["h-version-Q$i"] = result_to_dict(
             sequence_h_version(
-                fct; sas=sas, cbt=src.compute_cubature(sas, POINTTYPE, p), f_diam=f_diam
+                fct;
+                sas=sas,
+                cbt=src.compute_cubature(sas, POINTTYPE, p; maxiter=MAXITER),
+                f_diam=f_diam,
             ),
         )
     end
@@ -172,8 +179,8 @@ end
 # ╔═╡ ef5ef526-11f9-4a6b-bce1-d21870fea3c1
 if SAVEDATA
     for (sas, suffix) in [
-        (src.vicsek_2d(1 / 3),""),
-		(src.vicsek_2d(1 / 3, 0.4), "-0.4"),
+        (src.vicsek_2d(1 / 3), ""),
+        (src.vicsek_2d(1 / 3, 0.4), "-0.4"),
         (src.vicsek_2d(1 / 3, π / 4), "-pio4"),
         (src.sierpinski_triangle(0.5), ""),
         (src.sierpinski_triangle_fat(2), ""),
@@ -181,7 +188,14 @@ if SAVEDATA
         (src.cantor_dust_non_sym(), ""),
         (src.barnsley_fern(), ""),
     ]
-        _save_data(; sas=sas, k=5.0, x0=SVector{2}([0.1, -2.0]), Np=750, f_diam=1 / 100, suffix=suffix)
+        _save_data(;
+            sas=sas,
+            k=5.0,
+            x0=SVector{2}([0.1, -2.0]),
+            Np=750,
+            f_diam=1 / 100,
+            suffix=suffix,
+        )
     end
 
     _save_data(;
@@ -216,11 +230,10 @@ end
 function vicsek_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(
-        :xscale => log10, :xlabel => L"M", :yscale => log10
-    ) # :ylabel => L"Relative error$$"
+    ax_args = Dict(:xscale => log10, :xlabel => L"M", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for the Vicsek"
+        ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
@@ -238,12 +251,7 @@ function vicsek_pv()
         val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
 
         scatterlines!(
-            ax,
-            nb_pts,
-            relative_error.(val, val_ref);
-            marker=m,
-            linestyle=:dash,
-            label=leg,
+            ax, nb_pts, relative_error.(val, val_ref); marker=m, linestyle=:dash, label=leg
         )
 
         x_min = min(x_min, nb_pts[1])
@@ -267,33 +275,29 @@ vicsek_pv()
 function vicsek_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(
-        :xscale => log10, :xlabel => L"mesh size$$", :yscale => log10
-    ) # :ylabel => L"Relative error$$"
+    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$h$-version convergence for the Vicsek"
+        ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
-	h = [2.5e-2, 1.5e-1]
-	for (k, y) in [(1,3e-4),(3,5e-9),(5,5e-14)]
-		w = y .* (h ./ h[1]) .^ (k+1)
-		lines!(ax,h, w,color=:black)
-		p = k+1
-		text!(ax,√prod(h),√prod(w)*2; text=L"h^%$p")
-	end
+    h = [2.5e-2, 1.5e-1]
+    for (k, y) in [(1, 3e-4), (3, 5e-9), (5, 5e-14)]
+        w = y .* (h ./ h[1]) .^ (k + 1)
+        lines!(ax, h, w; color=:black)
+        p = k + 1
+        text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
+    end
 
     x_min, x_max = typemax(Int), 0
-    for (i, (s, t)) in enumerate( [
-        ("", "0"),
-        ("-rot-0.4", "0.4"),
-        ("-rot-pio4", "\\pi / 4"),
-    ])
+    for (i, (s, t)) in
+        enumerate([("", "0"), ("-rot-0.4", "0.4"), ("-rot-pio4", "\\pi / 4")])
         data = TOML.parsefile("../data-convergences/2d-vicsek$s.toml")
 
         val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
 
-        for (k,ls,mk) in [(1,:dashdot,:circle),(3,:dash,:cross),(5,:dot,:xcross)]
+        for (k, ls, mk) in [(1, :dashdot, :circle), (3, :dash, :cross), (5, :dot, :xcross)]
             name = "h-version-Q$k"
             mesh_size = data[name]["mesh-size"]
             val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
@@ -316,7 +320,7 @@ function vicsek_hv()
     end
 
     limits!(ax, (1e-2, 3.5), (1e-16, 10))
-    axislegend(ax; position=:rb, backgroundcolor=(:white,0))
+    axislegend(ax; position=:rb, backgroundcolor=(:white, 0))
 
     if SAVEPLOT
         save("2d-vicsek-hv.pdf", fig)
@@ -542,6 +546,63 @@ end
 # ╔═╡ fef04d01-a9bf-4cef-9bc3-a3cacd92d49d
 cantor_dust_sing_hv(4)
 
+# ╔═╡ ef3de3d9-a66d-4d4b-8a5b-498b2104933d
+function clean_name(name::String)
+    return replace(name, "-" => " ")
+end
+
+# ╔═╡ 53324fc5-0675-48be-a9f0-1da0e8ef5e10
+function other_example_pv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    if ADDTITLE
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    x_min, x_max = typemax(Int), 0
+    for (i, (name, mk)) in enumerate([
+        ("2d-sierpinski-triangle-fat", :circle),
+        ("2d-koch-snowflake", :cross),
+        ("2d-cantor-non-sym", :xcross),
+    ])
+        data = TOML.parsefile("../data-convergences/$name.toml")
+
+        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+        nb_pts = data["p-version"]["nb_pts"]
+        val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
+
+        scatterlines!(
+            ax,
+            nb_pts,
+            relative_error.(val, val_ref);
+            color=i,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=mk,
+            linestyle=:dash,
+            label=L"%$(clean_name(name))$$",
+        )
+
+        x_min = min(x_min, nb_pts[1])
+        x_max = max(x_max, nb_pts[end])
+    end
+
+    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
+    axislegend(ax; position=:rt, backgroundcolor=(:white, 0))
+
+    if SAVEPLOT
+        save("2d-other-example-pv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 741e4d28-56dd-4035-b543-3114173be543
+other_example_pv()
+
 # ╔═╡ Cell order:
 # ╠═fe657a18-63c0-11ef-0959-15170cb4d30a
 # ╠═b5d45ad9-3996-401f-96e5-78aba17e8686
@@ -550,6 +611,8 @@ cantor_dust_sing_hv(4)
 # ╠═71c6ed36-30c4-45d9-8cbb-d0d3c7212f62
 # ╠═15ecd841-9e9e-4291-900c-da1f6886a005
 # ╠═9356d11c-bf4c-4960-90e6-b787ed55a3e4
+# ╠═53324fc5-0675-48be-a9f0-1da0e8ef5e10
+# ╠═741e4d28-56dd-4035-b543-3114173be543
 # ╠═a0b5d444-1dec-4d63-ab09-bd3ee8e02bc3
 # ╠═12535b8a-b083-4704-b889-db0a460120ff
 # ╠═f281cd8d-b427-4e26-ad91-8538c6e5f744
@@ -576,3 +639,4 @@ cantor_dust_sing_hv(4)
 # ╠═ab675bc7-ecb3-4e39-9350-e0acb5f4be8c
 # ╠═9bbf2b35-a4b1-4943-b519-5149a2be2f1f
 # ╠═e7504b5e-edd4-49c2-8227-eaf9019bb8ee
+# ╠═ef3de3d9-a66d-4d4b-8a5b-498b2104933d
