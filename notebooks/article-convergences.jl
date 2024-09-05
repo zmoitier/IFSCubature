@@ -171,16 +171,17 @@ end
 
 # ╔═╡ ef5ef526-11f9-4a6b-bce1-d21870fea3c1
 if SAVEDATA
-    for sas in [
-        src.vicsek_2d(1 / 3),
-        src.vicsek_2d(1 / 3, π / 4),
-        src.sierpinski_triangle(0.5),
-        src.sierpinski_triangle_fat(2),
-        src.koch_snowflake(),
-        src.cantor_dust_non_sym(),
-        src.barnsley_fern(),
+    for (sas, suffix) in [
+        (src.vicsek_2d(1 / 3),""),
+		(src.vicsek_2d(1 / 3, 0.4), "-0.4"),
+        (src.vicsek_2d(1 / 3, π / 4), "-pio4"),
+        (src.sierpinski_triangle(0.5), ""),
+        (src.sierpinski_triangle_fat(2), ""),
+        (src.koch_snowflake(), ""),
+        (src.cantor_dust_non_sym(), ""),
+        (src.barnsley_fern(), ""),
     ]
-        _save_data(; sas=sas, k=5.0, x0=SVector{2}([0.5, -2.0]), Np=750, f_diam=1 / 100)
+        _save_data(; sas=sas, k=5.0, x0=SVector{2}([0.1, -2.0]), Np=750, f_diam=1 / 100, suffix=suffix)
     end
 
     _save_data(;
@@ -195,8 +196,8 @@ if SAVEDATA
         _save_data(;
             sas=src.cantor_dust(1 / 3, [-1.0, 1.0], 2),
             k=5.0,
-            x0=SVector{2}([x, 0.1]),
-            Np=626,
+            x0=SVector{2}([0.1, x]),
+            Np=750,
             suffix=@sprintf("-%.2f", x),
             f_diam=1 / 100,
         )
@@ -216,15 +217,19 @@ function vicsek_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(
-        :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
-    )
+        :xscale => log10, :xlabel => L"M", :yscale => log10
+    ) # :ylabel => L"Relative error$$"
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for the Vicsek"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
     x_min, x_max = typemax(Int), 0
-    for (s, m, l) in [("", :cross, "without"), ("-rot", :xcross, "with")]
+    for (s, m, leg) in [
+        ("", :circle, L"\theta = 0"),
+        ("-rot-0.4", :cross, L"\theta = 0.4"),
+        ("-rot-pio4", :xcross, L"\theta = \pi / 4"),
+    ]
         data = TOML.parsefile("../data-convergences/2d-vicsek$s.toml")
 
         val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
@@ -238,7 +243,7 @@ function vicsek_pv()
             relative_error.(val, val_ref);
             marker=m,
             linestyle=:dash,
-            label=L"%$l rotation$$",
+            label=leg,
         )
 
         x_min = min(x_min, nb_pts[1])
@@ -246,7 +251,7 @@ function vicsek_pv()
     end
 
     limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
-    axislegend(ax; position=:rt)
+    axislegend(ax; position=:lb)
 
     if SAVEPLOT
         save("2d-vicsek-pv.pdf", fig)
@@ -263,20 +268,32 @@ function vicsek_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(
-        :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
-    )
+        :xscale => log10, :xlabel => L"mesh size$$", :yscale => log10
+    ) # :ylabel => L"Relative error$$"
     if ADDTITLE
         ax_args[:title] = L"$h$-version convergence for the Vicsek"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
+	h = [2.5e-2, 1.5e-1]
+	for (k, y) in [(1,3e-4),(3,5e-9),(5,5e-14)]
+		w = y .* (h ./ h[1]) .^ (k+1)
+		lines!(ax,h, w,color=:black)
+		p = k+1
+		text!(ax,√prod(h),√prod(w)*2; text=L"h^%$p")
+	end
+
     x_min, x_max = typemax(Int), 0
-    for (s, mk, ls, leg) in [("", :cross, :dash, ""), ("-rot", :xcross, :dot, "rot")]
+    for (i, (s, t)) in enumerate( [
+        ("", "0"),
+        ("-rot-0.4", "0.4"),
+        ("-rot-pio4", "\\pi / 4"),
+    ])
         data = TOML.parsefile("../data-convergences/2d-vicsek$s.toml")
 
         val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
 
-        for k in 1:5
+        for (k,ls,mk) in [(1,:dashdot,:circle),(3,:dash,:cross),(5,:dot,:xcross)]
             name = "h-version-Q$k"
             mesh_size = data[name]["mesh-size"]
             val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
@@ -285,12 +302,12 @@ function vicsek_hv()
                 ax,
                 mesh_size,
                 relative_error.(val, val_ref);
-                color=k,
+                color=i,
                 colormap=:tab10,
                 colorrange=(1, 10),
-                marker=:xcross,
-                linestyle=:dash,
-                label=L"$Q%$k$",
+                marker=mk,
+                linestyle=ls,
+                label=L"$\mathbb{Q}_%$k$ and $\theta = %$t $",
             )
 
             x_min = min(x_min, mesh_size[end])
@@ -298,8 +315,8 @@ function vicsek_hv()
         end
     end
 
-    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
-    axislegend(ax; position=:rb)
+    limits!(ax, (1e-2, 3.5), (1e-16, 10))
+    axislegend(ax; position=:rb, backgroundcolor=(:white,0))
 
     if SAVEPLOT
         save("2d-vicsek-hv.pdf", fig)

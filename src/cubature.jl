@@ -25,7 +25,7 @@ mutable struct HCubature{D,T,N}
                 Base.Order.By(e -> -e[1]),
                 [(
                     2 * sas.bounding_ball.radius,
-                    AffineMap(SMatrix{D,D,T,N}(I), SVector{D,T}(zeros(D))),
+                    AffineMap(SMatrix{D,D,T,N}(I), SVector{D,T}(zeros(D)), one(T)),
                     one(T),
                 )],
             ),
@@ -58,7 +58,7 @@ function refine!(hcbt::HCubature{D,T,N}, sas::SelfAffineSet{D,T,N}) where {D,T,N
     for (hw, Sw, μw) in to_refine
         for (S, μ) in zip(sas.ifs, sas.measure)
             V = Sw ∘ S
-            push!(hcbt.heap, (opnorm(S.A) * hw, V, μw * μ))
+            push!(hcbt.heap, (S.ρ * hw, V, μw * μ))
         end
     end
 

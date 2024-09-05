@@ -24,6 +24,8 @@ begin
     # const POINTTYPE = "Gauss-Legendre"
     # const POINTTYPE = "Gauss-Lobatto"
 
+    const MAXITER = 2048
+
     #! Data generation
     const SAVEDATA = false # take some time
 
@@ -36,20 +38,18 @@ begin
 end
 
 # ╔═╡ f788e3a3-181f-4676-9463-ed5b53e47223
-function _save_weights(
-    sas::src.SelfAffineSet, M_max::Int, suffix::Union{String,Nothing}=nothing
-)
+function _save_weights(sas::src.SelfAffineSet, M_max::Int, suffix::String)
     filename = sas.name
     if !isnothing(suffix)
-        filename = filename * "-$suffix"
+        filename = filename * suffix
     end
 
-    open("$filename.csv", "w") do file
+    open("../data-weights/$filename.csv", "w") do file
         write(file, "nb-points,sum-abs\n")
         write(file, "1,$(@sprintf("%.16e", 1))\n")
 
         for M in 2:M_max
-            cbt = src.compute_cubature(sas, POINTTYPE, M; maxiter=2000)
+            cbt = src.compute_cubature(sas, POINTTYPE, M; maxiter=MAXITER)
 
             n = @sprintf("%d", length(cbt))
             w = @sprintf("%.16e", sum(abs.(cbt.weights)))
@@ -68,15 +68,19 @@ if SAVEDATA
         println(": done")
     end
 
-    for attractor in [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, true)]
-        _save_weights(attractor, 32)
+    for (sas, suffix) in [
+        (src.vicsek_2d(1 / 3), ""),
+        (src.vicsek_2d(1 / 3, 0.4), "-0.4"),
+        (src.vicsek_2d(1 / 3, π / 4), "-pio4"),
+    ]
+        _save_weights(sas, 32, suffix)
     end
 end
 
 # ╔═╡ 00cf0514-7931-4d7e-a523-ae918eac6de3
 function cantor_set_weights(M::Int)
     sas = src.cantor_set(1 / 3, [0.0, 1.0])
-    cbt = src.compute_cubature(sas, POINTTYPE, M)
+    cbt = src.compute_cubature(sas, POINTTYPE, M; maxiter=MAXITER)
     w_lim = extrema(cbt.weights)
     W = maximum(abs.(w_lim))
 
@@ -91,7 +95,7 @@ function cantor_set_weights(M::Int)
 
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"x", :ylabel => L"w")
+    ax_args = Dict() # :xlabel => L"x", :ylabel => L"w"
     if ADDTITLE
         ax_args[:title] = L"Cantor set with $\rho=1/3$ and $ M = %$M $"
     end
@@ -126,12 +130,12 @@ function cantor_set_weights(M::Int)
 end
 
 # ╔═╡ baa42609-1d76-439a-a82e-da277cbbc754
-cantor_set_weights(100)
+cantor_set_weights(255)
 
 # ╔═╡ ef2380b5-1ac8-43a7-be6c-b50d29608af5
 function vicsek_weights(M::Int)
-    attractor = src.vicsek_2d(1 / 3)
-    cbt = src.compute_cubature(attractor, POINTTYPE, M)
+    attractor = src.vicsek_2d(1 / 3, 0.4)
+    cbt = src.compute_cubature(attractor, POINTTYPE, M; maxiter=MAXITER)
     W = maximum(abs.(cbt.weights))
 
     pf = [[
@@ -146,7 +150,7 @@ function vicsek_weights(M::Int)
 
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"x", :ylabel => L"y", :aspect => 1)
+    ax_args = Dict(:aspect => 1) # :xlabel => L"x", :ylabel => L"y",
     if ADDTITLE
         ax_args[:title] = L"Vicsek with $\rho=1/3$ and $ M = %$(M*M) $"
     end
@@ -169,7 +173,7 @@ function vicsek_weights(M::Int)
         strokecolor=:black,
     )
 
-    Colorbar(fig[1, 2], sc; label=L"w")
+    Colorbar(fig[1, 2], sc) # label=L"w"
 
     if SAVEPLOT
         save("2d-vicsek-weights.pdf", fig)
@@ -185,7 +189,7 @@ vicsek_weights(10)
 function cantor_set_sum_weights()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M", :ylabel => L"|\mathbf{w}|_1")
+    ax_args = Dict(:xlabel => L"M") # :ylabel => L"|\mathbf{w}|_1"
     if ADDTITLE
         ax_args[:title] = L"Sum of the absolute value of the weight for Cantor set$$"
     end
@@ -193,7 +197,7 @@ function cantor_set_sum_weights()
 
     x = collect(1:500)
     y = 1 .+ 0.14 .* log.(x)
-    lines!(ax, x, y; color=:black, label=L"1 + \mathcal{O}(\log M)")
+    lines!(ax, x, y; color=:black, label=L"\mathcal{O}(\log M)")
 
     for s in [4, 3, 2]
         nb_pts = Int[]
@@ -227,7 +231,7 @@ cantor_set_sum_weights()
 function vicsek_sum_weights()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M", :ylabel => L"|\mathbf{w}|_1")
+    ax_args = Dict(:xlabel => L"M") # :ylabel => L"|\mathbf{w}|_1"
     if ADDTITLE
         ax_args[:title] = L"Sum of the absolute value of the weight for Vicsek$$"
     end
@@ -235,9 +239,13 @@ function vicsek_sum_weights()
 
     x = range(1, 1024; length=64)
     y = 1 .+ 0.007 .* log.(x) .^ 2
-    lines!(ax, x, y; color=:black, label=L"1 + \mathcal{O}(\log^2 M)")
+    lines!(ax, x, y; color=:black, label=L"\mathcal{O}(\log^2 M)")
 
-    for (s, m, l) in [("", :cross, "without"), ("-rot", :xcross, "with")]
+    for (s, m, l) in [
+        ("", :circle, L"\theta = 0"),
+        ("-rot-0.4", :cross, L"\theta = 0.4"),
+        ("-rot-pio4", :xcross, L"\theta = \pi / 4"),
+    ]
         nb_pts = Int[]
         sum_abs = Float64[]
 
@@ -250,9 +258,7 @@ function vicsek_sum_weights()
             end
         end
 
-        scatterlines!(
-            ax, nb_pts, sum_abs; marker=m, linestyle=:dash, label=L"%$l rotation$$"
-        )
+        scatterlines!(ax, nb_pts, sum_abs; marker=m, linestyle=:dash, label=l)
     end
 
     axislegend(ax; position=:lt)

@@ -105,7 +105,7 @@ _plot(src.sierpinski_triangle_fat(2), p_max)
 _plot(src.vicsek_2d(1 / 3), p_max)
 
 # ╔═╡ f6788e2d-ad6f-4dfc-9676-420c3a94f84e
-_plot(src.vicsek_2d(1 / 3, π / 4), p_max)
+_plot(src.vicsek_2d(1 / 3, 0.4), p_max)
 
 # ╔═╡ ac5bf72a-9274-4ea0-bf25-3444a7367364
 _plot(src.sierpinski_carpet(), p_max)

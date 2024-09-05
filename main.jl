@@ -228,43 +228,36 @@ function cantor_dust_test()
     return src.SelfAffineSet(ifs, fill(1 / 4, 4), ball, box, "2d-cantor-dust-test")
 end
 
-# sas = src.cantor_set([0.5, 0.5], [-1.0, 1.0], [0.5, 0.5])
-# sas = src.koch_snowflake()
-# sas = cantor_dust_test()
-# sas = src.cantor_dust_non_sym()
-sas = src.barnsley_fern()
-
-k = 5.0
-x0 = SVector{2}([2.0, 0.5])
-# fct = x -> green_kernel(k, x, x0)
-fct = x -> x[1]^4
-# function fct(x)
-#     if x[1] < 0.36
-#         return 1.0
-#     end
-#     return 0.0
-# end
-
-# _save_data(; sas=sas, k=5.0, x0=SVector{2}([2.0, 0.5]), Np=626)
-
-# display(_plot_pv(sas.name))
-# display(_plot_hv(sas.name))
-
-println("------------------------------------------")
-v_ref, prec = reference_p(fct; sas=sas, nb_pts_cbt=32)
-println((v_ref, prec))
-# reference_h(fct; sas=sas, nb_pts_cbt=15)
-
-cbt = src.compute_cubature(sas, "Chebyshev-1", 3; maxiter=MAXITER)
-n, h, v = sequence_h_version(fct; sas=sas, cbt=cbt)
+sas = src.square(-1.0, 1.0)
 
 fig = Figure()
-ax = Axis(fig[1, 1]; xscale=log10, yscale=log10)
+ax = Axis(fig[1, 1]; yscale=log10)
 
-# for a in 1:4
-lines!(h, h .^ 3; color=:black, linestyle=:dash)
-# end
+lines!(range(1, 800, 64), exp.(-range(1, 800, 64) .^ 0.5); color=:black)
 
-scatterlines!(ax, h, abs.(v .- v_ref))
+for y0 in [2.0, 1.5, 1.25, 1.125]
+    k = 5.0
+    fct = x -> green_kernel(k, x, SVector{2}([0.1, -y0]))
 
-fig
+    # _save_data(; sas=sas, k=5.0, x0=SVector{2}([2.0, 0.5]), Np=626)
+
+    # display(_plot_pv(sas.name))
+    # display(_plot_hv(sas.name))
+
+    # println("------------------------------------------")
+    # v_ref, prec = reference_p(fct; sas=sas, nb_pts_cbt=32)
+    # println((v_ref, prec))
+    v_ref, prec = reference_h(fct; sas=sas, nb_pts_cbt=15, f_diam=1 / 200)
+    println((v_ref, prec))
+
+    # cbt = src.compute_cubature(sas, "Chebyshev-1", 5; maxiter=MAXITER)
+    # n, h, v = sequence_h_version(fct; sas=sas, cbt=cbt, f_diam=1 / 100)
+
+    n, h, v = sequence_p_version(fct; sas=sas, nb_pts_max=750)
+
+    scatterlines!(ax, n, abs.(v ./ v_ref .- 1); linestyle=:dash, label="$y0")
+end
+
+axislegend(ax; position=:lb)
+
+display(fig)
