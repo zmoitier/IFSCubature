@@ -30,8 +30,8 @@ begin
     const SAVEDATA = false # take some time
 
     #! Ploting constants
-    const ADDTITLE = true
-    const SAVEPLOT = false
+    const ADDTITLE = false
+    const SAVEPLOT = true
     const FONTSIZE = 20
 
     "Global parameters"
@@ -227,12 +227,12 @@ function relative_error(result::Number, reference::Number)
 end
 
 # ╔═╡ 5d5bb600-9b89-48b3-90bc-4da6e9f48920
-function vicsek_pv()
+function vicsek_2d_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(:xscale => log10, :xlabel => L"M", :yscale => log10)
     if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for the Vicsek"
+        ax_args[:title] = L"$p$-version convergence for the 2d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -269,15 +269,15 @@ function vicsek_pv()
 end
 
 # ╔═╡ 71c6ed36-30c4-45d9-8cbb-d0d3c7212f62
-vicsek_pv()
+vicsek_2d_pv()
 
 # ╔═╡ 15ecd841-9e9e-4291-900c-da1f6886a005
-function vicsek_hv()
+function vicsek_2d_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
     ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
     if ADDTITLE
-        ax_args[:title] = L"$h$-version convergence for the Vicsek"
+        ax_args[:title] = L"$h$-version convergence for the 2d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -290,7 +290,6 @@ function vicsek_hv()
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
-    x_min, x_max = typemax(Int), 0
     for (i, (s, t)) in
         enumerate([("", "0"), ("-rot-0.4", "0.4"), ("-rot-pio4", "\\pi / 4")])
         data = TOML.parsefile("../data-convergences/2d-vicsek$s.toml")
@@ -311,11 +310,8 @@ function vicsek_hv()
                 colorrange=(1, 10),
                 marker=mk,
                 linestyle=ls,
-                label=L"$\mathbb{Q}_%$k$ and $\theta = %$t $",
+                label=L"$\mathbb{Q}_%$k$, $\theta = %$t $",
             )
-
-            x_min = min(x_min, mesh_size[end])
-            x_max = max(x_max, mesh_size[1])
         end
     end
 
@@ -330,7 +326,404 @@ function vicsek_hv()
 end
 
 # ╔═╡ 9356d11c-bf4c-4960-90e6-b787ed55a3e4
-vicsek_hv()
+vicsek_2d_hv()
+
+# ╔═╡ 53324fc5-0675-48be-a9f0-1da0e8ef5e10
+function other_example_pv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    if ADDTITLE
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    for (i, (name, mk, leg)) in enumerate([
+        ("2d-sierpinski-triangle-fat", :circle, "fat Sierpinski tri."),
+        ("2d-koch-snowflake", :cross, "Koch snowflake"),
+        ("2d-cantor-non-sym", :xcross, "Cantor dust"),
+    ])
+        data = TOML.parsefile("../data-convergences/$name.toml")
+
+        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+        nb_pts = data["p-version"]["nb_pts"]
+        val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
+
+        scatterlines!(
+            ax,
+            nb_pts,
+            relative_error.(val, val_ref);
+            color=i,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=mk,
+            linestyle=:dash,
+            label=L"%$leg$$",
+        )
+    end
+
+    limits!(ax, (0, 800), (1e-16, 10))
+    axislegend(ax; position=:rt, backgroundcolor=(:white, 0))
+
+    if SAVEPLOT
+        save("2d-other-example-pv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 741e4d28-56dd-4035-b543-3114173be543
+other_example_pv()
+
+# ╔═╡ 8e335283-2a0b-4677-9632-7bc17e583f4f
+function other_example_hv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(
+        :xscale => log10,
+        :xlabel => L"mesh size$$",
+        :yscale => log10,
+        :ylabel => L"Relative error$$",
+    )
+    if ADDTITLE
+        ax_args[:title] = L"$h$-version convergence for %$name"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    h = [2.5e-2, 1.5e-1]
+    for (k, y) in [(1, 2e-3), (3, 3e-8), (5, 5e-13)]
+        w = y .* (h ./ h[1]) .^ (k + 1)
+        lines!(ax, h, w; color=:black)
+        p = k + 1
+        text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
+    end
+
+    for (i, (filename, leg)) in enumerate([
+        ("2d-sierpinski-triangle-fat", "fat Sierpinski tri."),
+        ("2d-koch-snowflake", "Koch snowflake"),
+        ("2d-cantor-non-sym", "Cantor dust"),
+    ])
+        data = TOML.parsefile("../data-convergences/$filename.toml")
+
+        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+        for (k, mk) in [(1, :circle), (3, :cross), (5, :xcross)]
+            name = "h-version-Q$k"
+            mesh_size = data[name]["mesh-size"]
+            val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
+
+            scatterlines!(
+                ax,
+                mesh_size,
+                relative_error.(val, val_ref);
+                color=i,
+                colormap=:tab10,
+                colorrange=(1, 10),
+                marker=mk,
+                linestyle=:dash,
+                label=L"$\mathbb{Q}_%$k$, %$leg",
+            )
+        end
+    end
+
+    limits!(ax, (1e-2, 10), (1e-16, 10))
+    axislegend(ax; position=:rb, backgroundcolor=(:white, 0))
+
+    if SAVEPLOT
+        save("2d-other-example-hv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 43eb7cbf-c71e-4b7f-aa91-3fd5348de479
+other_example_hv()
+
+# ╔═╡ 44c81e00-8cd3-409c-9d0f-280482d792f4
+function vicsek_3d_pv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for the 3d Vicsek"
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    data = TOML.parsefile("../data-convergences/3d-vicsek-rot.toml")
+
+    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+    nb_pts = data["p-version"]["nb_pts"]
+    val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
+
+    scatterlines!(
+        ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
+    )
+
+    limits!(ax, (0, 3500), (1e-16, 10))
+
+    if SAVEPLOT
+        save("3d-vicsek-rot-pv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ e5f91725-d93c-4a0d-b60a-84c1aa98c970
+vicsek_3d_pv()
+
+# ╔═╡ 1c6e496b-c5e0-46c5-bd6e-7103fabba89a
+function vicsek_3d_hv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
+    if ADDTITLE
+        ax_args[:title] = L"$h$-version convergence for %$name"
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    h = [2.5e-2, 1.5e-1]
+    for (k, y) in [(1, 2e-4), (3, 1e-8), (5, 3e-13)]
+        w = y .* (h ./ h[1]) .^ (k + 1)
+        lines!(ax, h, w; color=:black)
+        p = k + 1
+        text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
+    end
+
+    data = TOML.parsefile("../data-convergences/3d-vicsek-rot.toml")
+
+    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+    for (i, k) in enumerate([1, 3, 5])
+        name = "h-version-Q$k"
+        mesh_size = data[name]["mesh-size"]
+        val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
+
+        scatterlines!(
+            ax,
+            mesh_size,
+            relative_error.(val, val_ref);
+            color=i,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=:xcross,
+            linestyle=:dash,
+            label=L"$\mathbb{Q}_%$k$",
+        )
+    end
+
+    limits!(ax, (1e-2, 4), (1e-16, 10))
+    axislegend(ax; position=:rb)
+
+    if SAVEPLOT
+        save("3d-vicsek-rot-hv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 6dbb183a-2f10-4a58-89de-cf4d0f98eec6
+vicsek_3d_hv()
+
+# ╔═╡ 761fb9fd-d4df-40fc-a30f-50a40695a129
+function barnsley_fern_pv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for the 3d Vicsek"
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    data = TOML.parsefile("../data-convergences/2d-barnsley-fern.toml")
+
+    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+    nb_pts = data["p-version"]["nb_pts"]
+    val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
+
+    scatterlines!(
+        ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
+    )
+
+    limits!(ax, (0, 800), (1e-10, 20))
+
+    if SAVEPLOT
+        save("2d-barnsley-fern-pv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 702de76b-2122-43e0-99c3-7a26a24e77f7
+barnsley_fern_pv()
+
+# ╔═╡ 57536c2b-09ef-4c36-abef-3802628a798f
+function barnsley_fern_hv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
+    if ADDTITLE
+        ax_args[:title] = L"$h$-version convergence for %$name"
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    h = [1e-1, 4e-1]
+    for (k, y) in [(1, 1e-2), (3, 5e-6), (5, 2e-9)]
+        w = y .* (h ./ h[1]) .^ (k + 1)
+        lines!(ax, h, w; color=:black)
+        p = k + 1
+        text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
+    end
+
+    data = TOML.parsefile("../data-convergences/2d-barnsley-fern.toml")
+
+    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+    for (i, k) in enumerate([1, 3, 5])
+        name = "h-version-Q$k"
+        mesh_size = data[name]["mesh-size"]
+        val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
+
+        scatterlines!(
+            ax,
+            mesh_size,
+            relative_error.(val, val_ref);
+            color=i,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=:xcross,
+            linestyle=:dash,
+            label=L"$\mathbb{Q}_%$k$",
+        )
+    end
+
+    limits!(ax, (8e-2, 15), (1e-10, 20))
+    axislegend(ax; position=:rb)
+
+    if SAVEPLOT
+        save("2d-barnsley-fern-hv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 8decb395-ecdb-4665-b2b3-9cb16f8c6c75
+barnsley_fern_hv()
+
+# ╔═╡ 2f67fe32-1768-4013-bc81-52350290242a
+function cantor_dust_sing_pv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xlabel => L"number of cubature points$$", :yscale => log10)
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    for (x, c, mk) in [
+        (-2.0, 1, :circle),
+        (-1.5, 2, :cross),
+        (-1.25, 3, :xcross),
+        (-1.0, 4, :utriangle),
+        (0.0, 5, :diamond),
+    ]
+        filename = "2d-cantor-dust-$(@sprintf("%.2f", abs(x)))"
+        data = TOML.parsefile("../data-convergences/$filename.toml")
+
+        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+        nb_pts = data["p-version"]["nb_pts"]
+        val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
+
+        scatterlines!(
+            ax,
+            nb_pts,
+            relative_error.(val, val_ref);
+            color=c,
+            colormap=:tab10,
+            colorrange=(1, 10),
+            marker=mk,
+            linestyle=:dash,
+            label=L"y = %$x",
+        )
+    end
+
+    limits!(ax, (0, 800), (1e-16, 10))
+    axislegend(ax; position=:lb)
+
+    if SAVEPLOT
+        save("2d-cantor-dust-sing-pv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 13371d5a-fb51-4010-b139-49617b7d314d
+cantor_dust_sing_pv()
+
+# ╔═╡ f19cafcc-b3e2-4998-b08b-cc57606f8fba
+function cantor_dust_sing_hv()
+    fig = Figure(; fontsize=FONTSIZE)
+
+    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
+    if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
+        ax_args[:ylabel] = L"Relative error$$"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+
+    h = [2.5e-2, 1.5e-1]
+    for (k, y) in [(1, 4e-4), (3, 8e-8), (5, 3e-12)]
+        w = y .* (h ./ h[1]) .^ (k + 1)
+        lines!(ax, h, w; color=:black)
+        p = k + 1
+        text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
+    end
+
+    for (i, x) in enumerate([-2.0, -1.5, -1.25, -1.0, 0.0])
+        filename = "2d-cantor-dust-$(@sprintf("%.2f", abs(x)))"
+        data = TOML.parsefile("../data-convergences/$filename.toml")
+
+        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
+
+        for (k, mk, ls) in [(1, :circle, :dashdot), (3, :cross, :dash), (5, :xcross, :dot)]
+            name = "h-version-Q$k"
+            mesh_size = data[name]["mesh-size"]
+            val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
+
+            args = Dict(
+                :color => k,
+                :colormap => :tab10,
+                :colorrange => (1, 10),
+                :marker => mk,
+                :linestyle => ls,
+            )
+            if i == 1
+                args[:label] = L"$\mathbb{Q}_%$k$"
+            end
+            scatterlines!(ax, mesh_size, relative_error.(val, val_ref); args...)
+        end
+    end
+
+    limits!(ax, (1e-2, 3.5), (1e-16, 10))
+    axislegend(ax; position=:rb)
+
+    if SAVEPLOT
+        save("2d-cantor-dust-sing-hv.pdf", fig)
+    end
+
+    return fig
+end
+
+# ╔═╡ 2b9c98a7-218a-4770-ad66-1c7f0cc450c5
+cantor_dust_sing_hv()
 
 # ╔═╡ a0b5d444-1dec-4d63-ab09-bd3ee8e02bc3
 function _plot_pv(name::String)
@@ -346,7 +739,6 @@ function _plot_pv(name::String)
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
-    x_min, x_max = typemax(Int), 0
     data = TOML.parsefile("../data-convergences/$name.toml")
 
     val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
@@ -357,11 +749,6 @@ function _plot_pv(name::String)
     scatterlines!(
         ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
     )
-
-    x_min = min(x_min, nb_pts[1])
-    x_max = max(x_max, nb_pts[end])
-
-    # limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
 
     return fig
 end
@@ -399,7 +786,6 @@ function _plot_hv(name::String)
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
-    x_min, x_max = typemax(Int), 0
     data = TOML.parsefile("../data-convergences/$name.toml")
 
     val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
@@ -420,12 +806,8 @@ function _plot_hv(name::String)
             linestyle=:dash,
             label=L"$Q%$k$",
         )
-
-        x_min = min(x_min, mesh_size[end])
-        x_max = max(x_max, mesh_size[1])
     end
 
-    # limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
     axislegend(ax; position=:rb)
 
     return fig
@@ -449,160 +831,6 @@ _plot_hv("2d-cantor-non-sym")
 # ╔═╡ c3af3f2b-b49a-45eb-9db3-37d674f1a48c
 _plot_hv("2d-barnsley-fern")
 
-# ╔═╡ bf9d9043-4c1c-4b82-926d-a3ee7aa0574f
-function cantor_dust_sing_pv()
-    fig = Figure(; fontsize=FONTSIZE)
-
-    ax_args = Dict(
-        :xlabel => L"number of cubature points$$",
-        :yscale => log10,
-        :ylabel => L"Relative error$$",
-    )
-    if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
-    end
-    ax = Axis(fig[1, 1]; ax_args...)
-
-    x_min, x_max = typemax(Int), 0
-    for (i, x) in enumerate([2.0, 1.5, 1.25, 1.0, 0.0])
-        filename = "2d-cantor-dust-$(@sprintf("%.2f", x))"
-        data = TOML.parsefile("../data-convergences/$filename.toml")
-
-        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
-
-        nb_pts = data["p-version"]["nb_pts"]
-        val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
-
-        scatterlines!(
-            ax,
-            nb_pts,
-            relative_error.(val, val_ref);
-            color=i,
-            colormap=:tab10,
-            colorrange=(1, 10),
-            marker=:xcross,
-            linestyle=:dash,
-            label=L"x = %$x",
-        )
-
-        x_min = min(x_min, nb_pts[1])
-        x_max = max(x_max, nb_pts[end])
-    end
-
-    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
-    axislegend(ax; position=:lb)
-
-    return fig
-end
-
-# ╔═╡ 77fe701f-f2ce-408b-a785-bb9acee6a54a
-cantor_dust_sing_pv()
-
-# ╔═╡ d1814922-76e9-4469-93f9-42c2a27bf98b
-function cantor_dust_sing_hv(k::Int)
-    fig = Figure(; fontsize=FONTSIZE)
-
-    ax_args = Dict(
-        :xscale => log10, :xlabel => L"M", :yscale => log10, :ylabel => L"Relative error$$"
-    )
-    if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
-    end
-    ax = Axis(fig[1, 1]; ax_args...)
-
-    x_min, x_max = typemax(Int), 0
-    for (i, x) in enumerate([2.0, 1.5, 1.25, 1.0, 0.0])
-        filename = "2d-cantor-dust-$(@sprintf("%.2f", x))"
-        data = TOML.parsefile("../data-convergences/$filename.toml")
-
-        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
-
-        name = "h-version-Q$k"
-        mesh_size = data[name]["mesh-size"]
-        val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
-
-        scatterlines!(
-            ax,
-            mesh_size,
-            relative_error.(val, val_ref);
-            color=k,
-            colormap=:tab10,
-            colorrange=(1, 10),
-            marker=:xcross,
-            linestyle=:dash,
-            label=L"$Q%$k$",
-        )
-
-        x_min = min(x_min, mesh_size[end])
-        x_max = max(x_max, mesh_size[1])
-    end
-
-    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
-    axislegend(ax; position=:rb)
-
-    return fig
-end
-
-# ╔═╡ fef04d01-a9bf-4cef-9bc3-a3cacd92d49d
-cantor_dust_sing_hv(4)
-
-# ╔═╡ ef3de3d9-a66d-4d4b-8a5b-498b2104933d
-function clean_name(name::String)
-    return replace(name, "-" => " ")
-end
-
-# ╔═╡ 53324fc5-0675-48be-a9f0-1da0e8ef5e10
-function other_example_pv()
-    fig = Figure(; fontsize=FONTSIZE)
-
-    ax_args = Dict(:xlabel => L"M", :yscale => log10)
-    if ADDTITLE
-        ax_args[:ylabel] = L"Relative error$$"
-    end
-    ax = Axis(fig[1, 1]; ax_args...)
-
-    x_min, x_max = typemax(Int), 0
-    for (i, (name, mk)) in enumerate([
-        ("2d-sierpinski-triangle-fat", :circle),
-        ("2d-koch-snowflake", :cross),
-        ("2d-cantor-non-sym", :xcross),
-    ])
-        data = TOML.parsefile("../data-convergences/$name.toml")
-
-        val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
-
-        nb_pts = data["p-version"]["nb_pts"]
-        val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
-
-        scatterlines!(
-            ax,
-            nb_pts,
-            relative_error.(val, val_ref);
-            color=i,
-            colormap=:tab10,
-            colorrange=(1, 10),
-            marker=mk,
-            linestyle=:dash,
-            label=L"%$(clean_name(name))$$",
-        )
-
-        x_min = min(x_min, nb_pts[1])
-        x_max = max(x_max, nb_pts[end])
-    end
-
-    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
-    axislegend(ax; position=:rt, backgroundcolor=(:white, 0))
-
-    if SAVEPLOT
-        save("2d-other-example-pv.pdf", fig)
-    end
-
-    return fig
-end
-
-# ╔═╡ 741e4d28-56dd-4035-b543-3114173be543
-other_example_pv()
-
 # ╔═╡ Cell order:
 # ╠═fe657a18-63c0-11ef-0959-15170cb4d30a
 # ╠═b5d45ad9-3996-401f-96e5-78aba17e8686
@@ -613,6 +841,20 @@ other_example_pv()
 # ╠═9356d11c-bf4c-4960-90e6-b787ed55a3e4
 # ╠═53324fc5-0675-48be-a9f0-1da0e8ef5e10
 # ╠═741e4d28-56dd-4035-b543-3114173be543
+# ╠═8e335283-2a0b-4677-9632-7bc17e583f4f
+# ╠═43eb7cbf-c71e-4b7f-aa91-3fd5348de479
+# ╠═44c81e00-8cd3-409c-9d0f-280482d792f4
+# ╠═e5f91725-d93c-4a0d-b60a-84c1aa98c970
+# ╠═1c6e496b-c5e0-46c5-bd6e-7103fabba89a
+# ╠═6dbb183a-2f10-4a58-89de-cf4d0f98eec6
+# ╠═761fb9fd-d4df-40fc-a30f-50a40695a129
+# ╠═702de76b-2122-43e0-99c3-7a26a24e77f7
+# ╠═57536c2b-09ef-4c36-abef-3802628a798f
+# ╠═8decb395-ecdb-4665-b2b3-9cb16f8c6c75
+# ╠═2f67fe32-1768-4013-bc81-52350290242a
+# ╠═13371d5a-fb51-4010-b139-49617b7d314d
+# ╠═f19cafcc-b3e2-4998-b08b-cc57606f8fba
+# ╠═2b9c98a7-218a-4770-ad66-1c7f0cc450c5
 # ╠═a0b5d444-1dec-4d63-ab09-bd3ee8e02bc3
 # ╠═12535b8a-b083-4704-b889-db0a460120ff
 # ╠═f281cd8d-b427-4e26-ad91-8538c6e5f744
@@ -627,10 +869,6 @@ other_example_pv()
 # ╠═e4d4001a-dc17-413e-b118-e0317c170a0d
 # ╠═a3b8cf1e-eb3f-403e-91ac-8d09f15b8f75
 # ╠═c3af3f2b-b49a-45eb-9db3-37d674f1a48c
-# ╠═bf9d9043-4c1c-4b82-926d-a3ee7aa0574f
-# ╠═77fe701f-f2ce-408b-a785-bb9acee6a54a
-# ╠═d1814922-76e9-4469-93f9-42c2a27bf98b
-# ╠═fef04d01-a9bf-4cef-9bc3-a3cacd92d49d
 # ╠═b8fdbae2-445d-444f-8561-3fc953a84983
 # ╠═252907f1-b344-4466-8f1a-8ff7ea94d7f7
 # ╠═f40a28d9-7577-4632-94b7-a617d91c1184
@@ -639,4 +877,3 @@ other_example_pv()
 # ╠═ab675bc7-ecb3-4e39-9350-e0acb5f4be8c
 # ╠═9bbf2b35-a4b1-4943-b519-5149a2be2f1f
 # ╠═e7504b5e-edd4-49c2-8227-eaf9019bb8ee
-# ╠═ef3de3d9-a66d-4d4b-8a5b-498b2104933d

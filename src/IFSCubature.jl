@@ -16,7 +16,7 @@ include("affine-map.jl")
 include("shapes.jl")
 include("self-affine-set.jl")
 include("points.jl")
-include("lagrange_polynomials.jl")
+include("lagrange-polynomials.jl")
 include("cubature.jl")
 
 include("example-1.jl")
