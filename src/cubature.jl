@@ -24,7 +24,7 @@ mutable struct HCubature{D,T,N}
             BinaryHeap{Tuple{T,AffineMap{D,T,N},T}}(
                 Base.Order.By(e -> -e[1]),
                 [(
-                    2 * sas.bounding_ball.radius,
+                    diameter(sas),
                     AffineMap(SMatrix{D,D,T,N}(I), SVector{D,T}(zeros(D)), one(T)),
                     one(T),
                 )],

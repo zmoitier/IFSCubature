@@ -42,6 +42,14 @@ function fix_point(f::AffineMap{D,T,N}) where {D,T,N}
     return (I - f.A) \ f.b
 end
 
+function fix_points(sas::SelfAffineSet{D,T,N}) where {D,T,N}
+    return fix_point.(sas.ifs)
+end
+
+function diameter(sas::SelfAffineSet{D,T,N}) where {D,T,N}
+    return 2 * sas.bounding_ball.radius
+end
+
 function smallest_radius(
     z::AbstractVector, ifs::Vector{AffineMap{D,T,N}}, p::Real=2
 ) where {D,T,N}
