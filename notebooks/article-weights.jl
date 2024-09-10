@@ -94,7 +94,7 @@ function cantor_set_weights(nb_pts::Int)
 
     ax_args::Dict{Symbol,Any} = Dict()
     if ADDTITLE
-        ax_args[:title] = L"Cantor set with $\rho=1/3$ and $ M = %$M $"
+        ax_args[:title] = L"Cantor set with $\rho=1/3$ and $ M = %$nb_pts $"
         ax_args[:xlabel] = L"x"
         ax_args[:ylabel] = L"w"
     end

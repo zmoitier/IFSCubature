@@ -165,7 +165,7 @@ function fudgeflake()
 
     ifs = [
         contractive_similarity(ρ, T, c) for
-        c in [[1, 0], [-1 / 2, √3 / 2], [1 / 2, -√3 / 2]]
+        c in [[1, 0], [-1 / 2, √3 / 2], [-1 / 2, -√3 / 2]]
     ]
 
     ball = bounding_ball(ifs)

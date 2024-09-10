@@ -10,7 +10,7 @@ begin
     Pkg.activate(Base.current_project())
     Pkg.instantiate()
 
-    using CairoMakie
+    using StaticArrays, CairoMakie
 
     import IFSCubature as src
 end
@@ -55,12 +55,49 @@ function _plot(sas::src.SelfAffineSet{1,T,1}, p_max::Int) where {T}
     return fig
 end
 
+# ╔═╡ 787f1d23-9b60-4111-81c0-e212d492ba10
+function plot_chaos_game!(ax::Axis, sas::src.SelfAffineSet{2,Float64,4}, nb_pts::Int)
+    box = sas.bounding_box
+    r = max(box.paxis[1, 1], box.paxis[2, 2])
+    _min = box.center .- r
+    # _max = box.center .+ r
+
+    n = 512
+    h = 2 * r / (n - 1)
+
+    function xy_to_ij(xy)
+        return floor.(Int, (xy - _min) ./ h .+ 0.5) .+ 1
+    end
+
+    p = cumsum(sas.measure)
+
+    f = fill(NaN, n, n)
+    for c in src.fix_points(sas)
+        xy = MVector{2,Float64}(c)
+        ij = xy_to_ij(xy)
+        f[ij[1], ij[2]] = 1
+        for _ in 1:(nb_pts ÷ length(sas.ifs))
+            k = searchsortedfirst(p, rand())
+            xy = sas.ifs[k](xy)
+            ij = xy_to_ij(xy)
+            f[ij[1], ij[2]] = 1
+        end
+    end
+
+    v = collect(0:(n - 1)) .* h
+    heatmap!(ax, _min[1] .+ v, _min[2] .+ v, f; colormap=Reverse(:grays), colorrange=(0, 1))
+
+    return nothing
+end
+
 # ╔═╡ e77088ae-f27b-4b6c-bd1c-881068a95e3b
 function _plot(sas::src.SelfAffineSet{2,T,4}, p_max::Int) where {T}
     tab10 = Makie.to_colormap(:tab10)
 
     fig = Figure()
     ax = Axis(fig[1, 1]; xlabel=L"x", ylabel=L"y", aspect=1, title=sas.name)
+
+    plot_chaos_game!(ax, sas, 100_000)
 
     balls = [sas.bounding_ball]
     ball_style = Dict(
@@ -171,3 +208,4 @@ _plot(src.cantor_dust(1 / 3, [-1.0, 1.0], 3), p_max)
 # ╠═912bc5b6-a174-4ed0-9fa1-5f4e8de4d5fb
 # ╠═7436e59c-1b01-46cf-b6c6-0add22c4b7d4
 # ╠═e77088ae-f27b-4b6c-bd1c-881068a95e3b
+# ╠═787f1d23-9b60-4111-81c0-e212d492ba10

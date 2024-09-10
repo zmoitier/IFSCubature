@@ -30,8 +30,8 @@ begin
     const SAVEDATA = false # take some time
 
     #! Ploting constants
-    const ADDTITLE = false
-    const SAVEPLOT = true
+    const ADDTITLE = true
+    const SAVEPLOT = false
     const FONTSIZE = 20
 
     "Global parameters"
@@ -334,6 +334,7 @@ function other_example_pv()
 
     ax_args = Dict(:xlabel => L"M", :yscale => log10)
     if ADDTITLE
+        ax_args[:title] = L"$p$-version convergence"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -387,7 +388,7 @@ function other_example_hv()
         :ylabel => L"Relative error$$",
     )
     if ADDTITLE
-        ax_args[:title] = L"$h$-version convergence for %$name"
+        ax_args[:title] = L"$h$-version convergence"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
@@ -480,7 +481,7 @@ function vicsek_3d_hv()
 
     ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
     if ADDTITLE
-        ax_args[:title] = L"$h$-version convergence for %$name"
+        ax_args[:title] = L"$h$-version convergence for the 3d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -534,7 +535,7 @@ function barnsley_fern_pv()
 
     ax_args = Dict(:xlabel => L"M", :yscale => log10)
     if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for the 3d Vicsek"
+        ax_args[:title] = L"$p$-version convergence for the Barnsley fern"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -568,7 +569,7 @@ function barnsley_fern_hv()
 
     ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
     if ADDTITLE
-        ax_args[:title] = L"$h$-version convergence for %$name"
+        ax_args[:title] = L"$h$-version convergence for the Barnsley fern"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -622,7 +623,7 @@ function cantor_dust_sing_pv()
 
     ax_args = Dict(:xlabel => L"number of cubature points$$", :yscale => log10)
     if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
+        ax_args[:title] = L"$p$-version convergence for Cantor dust"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -674,7 +675,7 @@ function cantor_dust_sing_hv()
 
     ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
     if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for nonsymmetric Cantor dust"
+        ax_args[:title] = L"$p$-version convergence for Cantor dust"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
@@ -725,112 +726,6 @@ end
 # ╔═╡ 2b9c98a7-218a-4770-ad66-1c7f0cc450c5
 cantor_dust_sing_hv()
 
-# ╔═╡ a0b5d444-1dec-4d63-ab09-bd3ee8e02bc3
-function _plot_pv(name::String)
-    fig = Figure(; fontsize=FONTSIZE)
-
-    ax_args = Dict(
-        :xlabel => L"number of cubature points$$",
-        :yscale => log10,
-        :ylabel => L"Relative error$$",
-    )
-    if ADDTITLE
-        ax_args[:title] = L"$p$-version convergence for %$name"
-    end
-    ax = Axis(fig[1, 1]; ax_args...)
-
-    data = TOML.parsefile("../data-convergences/$name.toml")
-
-    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
-
-    nb_pts = data["p-version"]["nb_pts"]
-    val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
-
-    scatterlines!(
-        ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
-    )
-
-    return fig
-end
-
-# ╔═╡ f281cd8d-b427-4e26-ad91-8538c6e5f744
-_plot_pv("2d-sierpinski-triangle")
-
-# ╔═╡ 84dd7bad-7797-45e4-b2e0-f8defab92759
-_plot_pv("2d-sierpinski-triangle-fat")
-
-# ╔═╡ 90b65bf1-a164-401c-92b6-5563eb768474
-_plot_pv("3d-vicsek-rot")
-
-# ╔═╡ a3b65e8e-14d6-4c0c-a4ef-a29c9695c2bd
-_plot_pv("2d-koch-snowflake")
-
-# ╔═╡ 7038e5de-a1cb-42d6-b21b-2d4f77656f62
-_plot_pv("2d-cantor-non-sym")
-
-# ╔═╡ a3b8cf1e-eb3f-403e-91ac-8d09f15b8f75
-_plot_pv("2d-barnsley-fern")
-
-# ╔═╡ 12535b8a-b083-4704-b889-db0a460120ff
-function _plot_hv(name::String)
-    fig = Figure(; fontsize=FONTSIZE)
-
-    ax_args = Dict(
-        :xscale => log10,
-        :xlabel => L"mesh size$$",
-        :yscale => log10,
-        :ylabel => L"Relative error$$",
-    )
-    if ADDTITLE
-        ax_args[:title] = L"$h$-version convergence for %$name"
-    end
-    ax = Axis(fig[1, 1]; ax_args...)
-
-    data = TOML.parsefile("../data-convergences/$name.toml")
-
-    val_ref = data["reference"]["value-real"] + im .* data["reference"]["value-imag"]
-
-    for k in 1:5
-        name = "h-version-Q$k"
-        mesh_size = data[name]["mesh-size"]
-        val = data[name]["values-real"] .+ im .* data[name]["values-imag"]
-
-        scatterlines!(
-            ax,
-            mesh_size,
-            relative_error.(val, val_ref);
-            color=k,
-            colormap=:tab10,
-            colorrange=(1, 10),
-            marker=:xcross,
-            linestyle=:dash,
-            label=L"$Q%$k$",
-        )
-    end
-
-    axislegend(ax; position=:rb)
-
-    return fig
-end
-
-# ╔═╡ 50c9daf2-7ebc-434f-a582-06c1cf6d0e4f
-_plot_hv("2d-sierpinski-triangle")
-
-# ╔═╡ 95cbcb72-0fda-48b2-8355-081f4c38f5b6
-_plot_hv("2d-sierpinski-triangle-fat")
-
-# ╔═╡ 2876ac50-8d20-4e82-8684-f9f626952fa0
-_plot_hv("3d-vicsek-rot")
-
-# ╔═╡ 732a6a47-ede0-432f-bbf6-dbf8cd11f40d
-_plot_hv("2d-koch-snowflake")
-
-# ╔═╡ e4d4001a-dc17-413e-b118-e0317c170a0d
-_plot_hv("2d-cantor-non-sym")
-
-# ╔═╡ c3af3f2b-b49a-45eb-9db3-37d674f1a48c
-_plot_hv("2d-barnsley-fern")
-
 # ╔═╡ Cell order:
 # ╠═fe657a18-63c0-11ef-0959-15170cb4d30a
 # ╠═b5d45ad9-3996-401f-96e5-78aba17e8686
@@ -855,20 +750,6 @@ _plot_hv("2d-barnsley-fern")
 # ╠═13371d5a-fb51-4010-b139-49617b7d314d
 # ╠═f19cafcc-b3e2-4998-b08b-cc57606f8fba
 # ╠═2b9c98a7-218a-4770-ad66-1c7f0cc450c5
-# ╠═a0b5d444-1dec-4d63-ab09-bd3ee8e02bc3
-# ╠═12535b8a-b083-4704-b889-db0a460120ff
-# ╠═f281cd8d-b427-4e26-ad91-8538c6e5f744
-# ╠═50c9daf2-7ebc-434f-a582-06c1cf6d0e4f
-# ╠═84dd7bad-7797-45e4-b2e0-f8defab92759
-# ╠═95cbcb72-0fda-48b2-8355-081f4c38f5b6
-# ╠═90b65bf1-a164-401c-92b6-5563eb768474
-# ╠═2876ac50-8d20-4e82-8684-f9f626952fa0
-# ╠═a3b65e8e-14d6-4c0c-a4ef-a29c9695c2bd
-# ╠═732a6a47-ede0-432f-bbf6-dbf8cd11f40d
-# ╠═7038e5de-a1cb-42d6-b21b-2d4f77656f62
-# ╠═e4d4001a-dc17-413e-b118-e0317c170a0d
-# ╠═a3b8cf1e-eb3f-403e-91ac-8d09f15b8f75
-# ╠═c3af3f2b-b49a-45eb-9db3-37d674f1a48c
 # ╠═b8fdbae2-445d-444f-8561-3fc953a84983
 # ╠═252907f1-b344-4466-8f1a-8ff7ea94d7f7
 # ╠═f40a28d9-7577-4632-94b7-a617d91c1184
