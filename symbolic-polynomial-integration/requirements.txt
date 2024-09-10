@@ -1,0 +1,7 @@
+jupyterlab
+jupyterlab-code-formatter
+matplotlib
+mypy
+numpy
+ruff
+sympy

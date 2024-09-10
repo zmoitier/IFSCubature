@@ -550,7 +550,7 @@ function barnsley_fern_pv()
         ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
     )
 
-    limits!(ax, (0, 800), (1e-10, 20))
+    limits!(ax, (0, 800), (1e-3, 20))
 
     if SAVEPLOT
         save("2d-barnsley-fern-pv.pdf", fig)
