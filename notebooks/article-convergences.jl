@@ -230,7 +230,7 @@ end
 function vicsek_2d_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xscale => log10, :xlabel => L"M", :yscale => log10)
+    ax_args = Dict(:xlabel => L"M", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for the 2d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
@@ -275,7 +275,7 @@ vicsek_2d_pv()
 function vicsek_2d_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
+    ax_args = Dict(:xscale => log10, :xlabel => L"h", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$h$-version convergence for the 2d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
@@ -381,14 +381,10 @@ other_example_pv()
 function other_example_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(
-        :xscale => log10,
-        :xlabel => L"mesh size$$",
-        :yscale => log10,
-        :ylabel => L"Relative error$$",
-    )
+    ax_args = Dict(:xscale => log10, :xlabel => L"h", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$h$-version convergence"
+        ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
@@ -479,7 +475,7 @@ vicsek_3d_pv()
 function vicsek_3d_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
+    ax_args = Dict(:xscale => log10, :xlabel => L"h", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$h$-version convergence for the 3d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
@@ -567,7 +563,7 @@ barnsley_fern_pv()
 function barnsley_fern_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
+    ax_args = Dict(:xscale => log10, :xlabel => L"h", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$h$-version convergence for the Barnsley fern"
         ax_args[:ylabel] = L"Relative error$$"
@@ -621,12 +617,21 @@ barnsley_fern_hv()
 function cantor_dust_sing_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"number of cubature points$$", :yscale => log10)
+    ax_args = Dict(:xlabel => L"M", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for Cantor dust"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+
+    x = range(0, 800, 128)
+    lines!(
+        ax,
+        x,
+        exp.(-1.3 .* .√x);
+        color=:black,
+        label=L"\mathcal{O}(\mathrm{e}^{- \mathcal{O}(\sqrt{M})})",
+    )
 
     for (x, c, mk) in [
         (-2.0, 1, :circle),
@@ -673,7 +678,7 @@ cantor_dust_sing_pv()
 function cantor_dust_sing_hv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xscale => log10, :xlabel => L"mesh size$$", :yscale => log10)
+    ax_args = Dict(:xscale => log10, :xlabel => L"h", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for Cantor dust"
         ax_args[:ylabel] = L"Relative error$$"
