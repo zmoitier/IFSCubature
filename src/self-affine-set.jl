@@ -98,14 +98,14 @@ function dimension(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
         η[i], ρ[i] = σ[end], σ[1]
     end
 
-    return (_similarity_dimension(η), _similarity_dimension(ρ))
+    return (similarity_dimension(η), similarity_dimension(ρ))
 end
 
 function similarity_dimension(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    return _similarity_dimension([S.ρ for S in ifs])
+    return similarity_dimension([S.ρ for S in ifs])
 end
 
-function _similarity_dimension(ρ::Vector)
+function similarity_dimension(ρ::Vector)
     bracket = (-log(length(ρ))) ./ log.(extrema(ρ))
     return find_zero(d -> sum(ρ .^ d) .- 1, bracket, Brent())
 end
