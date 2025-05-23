@@ -96,8 +96,8 @@ function get_points(type_points::String, nb_points::Int)
     else
         mgs = "possible type of points are:\n"
         for choice in [
-            "equispaced-1",
-            "equispaced-2",
+            "Equispaced-1",
+            "Equispaced-2",
             "Chebyshev-1",
             "Chebyshev-2",
             "Gauss-Legendre",
