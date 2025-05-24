@@ -13,7 +13,7 @@ struct SelfAffineSet{D,T,N}
         name::String,
     ) where {D,T,N}
         @assert length(ifs) == length(measure) "length(ifs) == length(measure)"
-        @assert all(all(S.ρ < 1) for S in ifs) "The matrices `A` must be contrations."
+        @assert all(all(S.ρ < 1) for S in ifs) "The matrices `A` must be contractions."
         @assert all(0 .≤ measure .< 1) "The measure weights must be in the interval (0, 1)."
         @assert sum(measure) ≈ 1 "The measure weights must sum to 1."
 
@@ -60,26 +60,58 @@ function smallest_radius(
 end
 
 """Return the smallest bounding ball."""
-function bounding_ball(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    fs = 1 ./ (1 .- [S.ρ for S in ifs])
+function bounding_ball(ifs::Vector{AffineMap{D,T,N}}; k::Int=1) where {D,T,N}
+    ams = deepcopy(ifs)
+    ins = 1 ./ (1 .- [opnorm(S.A, 2) for S in ams])
+    z = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
 
-    x0 = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
-    res = Optim.optimize(z -> _smallest_radius(z, ifs, fs, 2), x0)
-    return hyper_ball(Optim.minimizer(res), Optim.minimum(res))
+    result = Optim.optimize(c -> _smallest_radius(c, ams, ins, 2), z)
+    z, r = Optim.minimizer(result), Optim.minimum(result)
+
+    for _ in 2:k
+        ams = _combine(ifs, ams)
+        ins = 1 ./ (1 .- [opnorm(S.A, 2) for S in ams])
+
+        result = Optim.optimize(c -> _smallest_radius(c, ams, ins, 2), z)
+        z, r = Optim.minimizer(result), Optim.minimum(result)
+    end
+
+    return hyper_ball(z, r)
 end
 
 """Return the smallest bounding box."""
-function bounding_box(ifs::Vector{AffineMap{D,T,N}}) where {D,T,N}
-    opnorm_inf = [opnorm(S.A, Inf) for S in ifs]
-    for (S, n) in zip(ifs, opnorm_inf)
+function bounding_box(ifs::Vector{AffineMap{D,T,N}}; k::Int=1) where {D,T,N}
+    op_norm = [opnorm(S.A, Inf) for S in ifs]
+    for (S, n) in zip(ifs, op_norm)
         @assert !(isapprox(n, 1) || (n > 1)) "Affine map `$S` is not contracting for ∞-norm."
     end
 
-    fs = 1 ./ (1 .- opnorm_inf)
-    x0 = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
-    res = Optim.optimize(z -> _smallest_radius(z, ifs, fs, Inf), x0)
+    ams = deepcopy(ifs)
+    ins = 1 ./ (1 .- op_norm)
+    z = MVector{D,T}(sum(fix_point.(ifs)) ./ length(ifs))
 
-    return hyper_box(Optim.minimizer(res), Diagonal(fill(Optim.minimum(res), D)))
+    result = Optim.optimize(c -> _smallest_radius(c, ams, ins, Inf), z)
+    z, r = Optim.minimizer(result), Optim.minimum(result)
+
+    for _ in 2:k
+        ams = _combine(ifs, ams)
+        ins = 1 ./ (1 .- [opnorm(S.A, Inf) for S in ams])
+
+        result = Optim.optimize(c -> _smallest_radius(c, ams, ins, Inf), z)
+        z, r = Optim.minimizer(result), Optim.minimum(result)
+    end
+
+    return hyper_box(z, Diagonal(fill(r, D)))
+end
+
+function _combine(
+    ifs_a::Vector{AffineMap{D,T,N}}, ifs_b::Vector{AffineMap{D,T,N}}
+) where {D,T,N}
+    ifs_c = Vector{AffineMap{D,T,N}}()
+    for (R, S) in Iterators.product(ifs_a, ifs_b)
+        push!(ifs_c, R ∘ S)
+    end
+    return ifs_c
 end
 
 function _smallest_radius(

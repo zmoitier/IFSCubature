@@ -168,11 +168,8 @@ function fudgeflake()
         c in [[1, 0], [-1 / 2, √3 / 2], [-1 / 2, -√3 / 2]]
     ]
 
-    ball = bounding_ball(ifs)
-    box = bounding_box(ifs)
-    if ball.radius < box.paxis[1, 1]
-        box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
-    end
+    ball = bounding_ball(ifs; k=4)
+    box = bounding_box(ifs; k=4)
 
     return SelfAffineSet(ifs, fill(1 / 3, 3), ball, box, "2d-fudgeflake")
 end
@@ -187,7 +184,7 @@ function heighway_dragon()
         ),
     ]
 
-    ball = bounding_ball(ifs)
+    ball = bounding_ball(ifs; k=5)
     box = hyper_box(ball.center, Diagonal(fill(ball.radius, 2)))
 
     return SelfAffineSet(ifs, fill(1 / 2, 2), ball, box, "2d-heighway-dragon")
@@ -201,7 +198,7 @@ function levy_dragon()
         contractive_similarity(ρ, matrix_rotation_2d(-1 / 4; implicit_pi=true), [1, 0]),
     ]
 
-    ball = bounding_ball(ifs)
+    ball = bounding_ball(ifs; k=7)
     box = hyper_box(ball.center, Diagonal(fill(ball.radius, 2)))
 
     return SelfAffineSet(ifs, fill(1 / 2, 2), ball, box, "2d-levy-dragon")
@@ -215,11 +212,8 @@ function terdragon()
 
     ifs = [contractive_similarity(ρ, R, [x, 0]) for (R, x) in zip(Rs, xs)]
 
-    ball = bounding_ball(ifs)
-    box = bounding_box(ifs)
-    if ball.radius < box.paxis[1, 1]
-        box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
-    end
+    ball = bounding_ball(ifs; k=5)
+    box = bounding_box(ifs; k=7)
 
     return SelfAffineSet(ifs, fill(1 / 3, 3), ball, box, "2d-terdragon")
 end
@@ -231,7 +225,7 @@ function twindragon()
 
     ifs = [contractive_similarity(ρ, R, [x, 0]) for x in [-1, 1]]
 
-    ball = bounding_ball(ifs)
+    ball = bounding_ball(ifs; k=4)
     box = hyper_box(ball.center, Diagonal(fill(ball.radius, 2)))
 
     return SelfAffineSet(ifs, fill(1 / 2, 2), ball, box, "2d-twindragon")
@@ -250,11 +244,8 @@ function cantor_dust_non_sym()
 
     ifs = [contractive_similarity(r, M, v) for (r, M, v) in zip(rs, Ms, vs)]
 
-    ball = bounding_ball(ifs)
-    box = bounding_box(ifs)
-    if ball.radius < box.paxis[1, 1]
-        box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
-    end
+    ball = bounding_ball(ifs; k=4)
+    box = bounding_box(ifs; k=5)
 
     d = similarity_dimension(ifs)
     measure = [S.ρ for S in ifs] .^ d
@@ -271,11 +262,13 @@ function barnsley_fern()
         affine_map([-0.15 0.28; 0.26 0.24], [0.0, 0.44]),
     ]
 
-    ball = bounding_ball(ifs)
-    box = bounding_box(ifs)
-    if ball.radius < box.paxis[1, 1]
-        box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
+    for k in 1:8
+        ball = bounding_box(ifs; k=k)
+        println("$k -> $(ball.paxis[1,1])")
     end
+
+    ball = bounding_ball(ifs; k=3)
+    box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
 
     # d = dimension(ifs)[1]
     # measure = [svdvals(S.A)[end] for S in ifs] .^ d
