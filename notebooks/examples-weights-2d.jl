@@ -10,7 +10,7 @@ begin
     Pkg.activate(Base.current_project())
     Pkg.instantiate()
 
-    using StaticArrays, GLMakie
+    using StaticArrays, CairoMakie
 
     import IFSCubature as src
 end
@@ -41,7 +41,10 @@ end
 
 # ╔═╡ 55bc8777-4eae-4b63-829c-3aa24bb719e7
 function plot_sum(
-    vec_sas::Vector{src.SelfAffineSet{D,T,N}}; pts_cbt_type::String, pts_cbt_max::Int
+    vec_sas::Vector{src.SelfAffineSet{D,T,N}};
+    pts_cbt_type::String,
+    pts_cbt_max::Int,
+    name::String="",
 ) where {D,T,N}
     fig = Figure(; size=(600, 400), fontsize=FONTSIZE)
     ax = Axis(fig[1, 1]; yscale=log10)
@@ -49,6 +52,10 @@ function plot_sum(
     for sas in vec_sas
         nb_pts, sum_abs = _comp_weights(sas, pts_cbt_type, pts_cbt_max)
         scatterlines!(ax, nb_pts, sum_abs; linestyle=:dash)
+    end
+
+    if SAVEFIG && !isempty(name)
+        save("$name-weights-sum.pdf", fig)
     end
 
     return fig
@@ -109,6 +116,7 @@ plot_sum(
     [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
     pts_cbt_type="Chebyshev-1",
     pts_cbt_max=16,
+    name="2d-vicsek-chebyshev",
 )
 
 # ╔═╡ 41b14410-8956-4637-aade-11ca214a1d17
@@ -116,6 +124,7 @@ plot_sum(
     [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
     pts_cbt_type="Equispaced-1",
     pts_cbt_max=16,
+    name="2d-vicsek-equispaced",
 )
 
 # ╔═╡ b8bd21bf-256e-42f2-b9d3-781f662040ad
@@ -247,6 +256,7 @@ function plot_weights_2d(;
     pts_cbt_type::String,
     pts_cbt_nb::Int,
     α_weights::Real,
+    name::String="",
 ) where {T}
     fig = Figure(; size=(600, 600), fontsize=FONTSIZE)
     ax = Axis(fig[1, 1]; aspect=1, xlabel=L"x", ylabel=L"y")
@@ -264,7 +274,7 @@ function plot_weights_2d(;
     xmin, xmax, ymin, ymax = _get_limits(sas.bounding_box)
     limits!(ax, xmin, xmax, ymin, ymax)
 
-    if SAVEFIG
+    if SAVEFIG && !isempty(name)
         save("$name-weights-2d.pdf", fig)
     end
 
@@ -309,6 +319,7 @@ plot_weights_2d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
+    name="2d-vicsek",
 )
 
 # ╔═╡ ee205c3f-5514-42a5-8eeb-a4e1447229ad
@@ -319,6 +330,7 @@ plot_weights_2d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
+    name="2d-vicse-rot-0.4",
 )
 
 # ╔═╡ c23fea07-1737-44c9-8e0f-4d4dfbae6cfd
@@ -329,6 +341,7 @@ plot_weights_2d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
+    name="2d-vicse-rot-pio4",
 )
 
 # ╔═╡ bb4ee489-81aa-4ae8-af03-2685cec5219a
@@ -459,6 +472,7 @@ function plot_weights_3d(;
     pts_cbt_type::String,
     pts_cbt_nb::Int,
     α_weights::Real,
+    name::String="",
 ) where {T}
     fig = Figure(; size=(800, 600), fontsize=FONTSIZE)
     ax = Axis3(fig[1, 1]; xlabel=L"x", ylabel=L"y", zlabel=L"|w|")
@@ -487,7 +501,7 @@ function plot_weights_3d(;
     xmin, xmax, ymin, ymax = _get_limits(sas.bounding_box)
     limits!(ax, xmin, xmax, ymin, ymax, 0.0, maximum(abs.(cbt.weights)))
 
-    if SAVEFIG
+    if SAVEFIG && !isempty(name)
         save("$name-weights-3d.pdf", fig)
     end
 
@@ -532,6 +546,7 @@ plot_weights_3d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
+    name="2d-vicsek",
 )
 
 # ╔═╡ e38481e0-c432-4220-beaa-f7912e0c56f1
@@ -542,6 +557,7 @@ plot_weights_3d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
+    name="2d-vicse-rot-0.4",
 )
 
 # ╔═╡ f2c95728-c94f-48d3-a7a8-a8816a8e0cca
@@ -552,6 +568,7 @@ plot_weights_3d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
+    name="2d-vicse-rot-pio4",
 )
 
 # ╔═╡ 4ab0c8f4-b370-4107-9c5b-98bc039c3df9

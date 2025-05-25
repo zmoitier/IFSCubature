@@ -30,7 +30,7 @@ function _plot(sas::src.SelfAffineSet{1,T,1}, p_max::Int) where {T}
     tab10 = Makie.to_colormap(:tab10)
 
     fig = Figure()
-    ax = Axis(fig[1, 1]; xlabel=L"x", aspect=1, title=sas.name)
+    ax = Axis(fig[1, 1]; xlabel=L"x", aspect=DataAspect(), title=sas.name)
 
     balls = [sas.bounding_ball]
     ball_style = Dict(:color => tab10[1])
@@ -95,7 +95,7 @@ function _plot(sas::src.SelfAffineSet{2,T,4}, p_max::Int) where {T}
     tab10 = Makie.to_colormap(:tab10)
 
     fig = Figure()
-    ax = Axis(fig[1, 1]; xlabel=L"x", ylabel=L"y", aspect=1, title=sas.name)
+    ax = Axis(fig[1, 1]; xlabel=L"x", ylabel=L"y", aspect=DataAspect(), title=sas.name)
 
     plot_chaos_game!(ax, sas, 100_000)
 

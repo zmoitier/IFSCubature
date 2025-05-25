@@ -262,11 +262,6 @@ function barnsley_fern()
         affine_map([-0.15 0.28; 0.26 0.24], [0.0, 0.44]),
     ]
 
-    for k in 1:8
-        ball = bounding_box(ifs; k=k)
-        println("$k -> $(ball.paxis[1,1])")
-    end
-
     ball = bounding_ball(ifs; k=3)
     box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
 

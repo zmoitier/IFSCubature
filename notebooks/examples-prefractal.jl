@@ -21,7 +21,7 @@ function _plot(attractor::src.SelfAffineSet{3,T,9}, p_max::Int) where {T} end
 # ╔═╡ c241a629-26bf-450d-a121-87e7d649fd94
 function _plot(sas::src.SelfAffineSet{1,T,1}, f0::src.Segment{T}, p_max::Int) where {T}
     fig = Figure()
-    ax = Axis(fig[1, 1]; xlabel=L"x", aspect=1)
+    ax = Axis(fig[1, 1]; xlabel=L"x", aspect=DataAspect())
 
     box = [x[1] for x in src.vertices(sas.bounding_box)]
     for p in 0:p_max
