@@ -19,7 +19,6 @@ end
 begin
     const MAXITER = 2048
     const FONTSIZE = 20
-    const SAVEFIG = false
 
     "Global parameters"
 end
@@ -44,21 +43,47 @@ function plot_sum(
     vec_sas::Vector{src.SelfAffineSet{D,T,N}};
     pts_cbt_type::String,
     pts_cbt_max::Int,
+    yscalelog::Bool=false,
     name::String="",
 ) where {D,T,N}
     fig = Figure(; size=(600, 400), fontsize=FONTSIZE)
-    ax = Axis(fig[1, 1]; yscale=log10)
+    if yscalelog
+        ax = Axis(fig[1, 1]; yscale=log10)
+    else
+        ax = Axis(fig[1, 1])
+    end
 
     for sas in vec_sas
         nb_pts, sum_abs = _comp_weights(sas, pts_cbt_type, pts_cbt_max)
         scatterlines!(ax, nb_pts, sum_abs; linestyle=:dash)
     end
 
-    if SAVEFIG && !isempty(name)
+    if !isempty(name)
         save("$name-weights-sum.pdf", fig)
     end
 
     return fig
+end
+
+# ╔═╡ c66d4d24-f88b-4c14-88bd-0d1296d03c43
+begin
+    if false
+        plot_sum(
+            [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
+            pts_cbt_type="Chebyshev-1",
+            pts_cbt_max=32,
+            name="2d-vicsek-chebyshev",
+        )
+        plot_sum(
+            [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
+            pts_cbt_type="Equispaced-1",
+            pts_cbt_max=16,
+            yscalelog=true,
+            name="2d-vicsek-equispaced",
+        )
+    end
+
+    nothing
 end
 
 # ╔═╡ 24535836-fded-4006-9997-b1c90f7968aa
@@ -81,6 +106,7 @@ plot_sum(
     ];
     pts_cbt_type="Equispaced-1",
     pts_cbt_max=16,
+    yscalelog=true,
 )
 
 # ╔═╡ 0abc12ce-d6a4-492a-94da-1e4b20f512ba
@@ -95,6 +121,7 @@ plot_sum(
     [src.sierpinski_triangle(), src.sierpinski_triangle(1 / 3)];
     pts_cbt_type="Equispaced-1",
     pts_cbt_max=16,
+    yscalelog=true,
 )
 
 # ╔═╡ de42d1b9-acab-40c5-be2e-36fa57d35912
@@ -109,6 +136,7 @@ plot_sum(
     [src.sierpinski_triangle_fat(2), src.sierpinski_triangle_fat(3)];
     pts_cbt_type="Equispaced-1",
     pts_cbt_max=16,
+    yscalelog=true,
 )
 
 # ╔═╡ 45d43dc7-eb04-4a3a-9a20-004734765c4b
@@ -116,7 +144,6 @@ plot_sum(
     [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
     pts_cbt_type="Chebyshev-1",
     pts_cbt_max=16,
-    name="2d-vicsek-chebyshev",
 )
 
 # ╔═╡ 41b14410-8956-4637-aade-11ca214a1d17
@@ -124,77 +151,92 @@ plot_sum(
     [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
     pts_cbt_type="Equispaced-1",
     pts_cbt_max=16,
-    name="2d-vicsek-equispaced",
+    yscalelog=true,
 )
 
 # ╔═╡ b8bd21bf-256e-42f2-b9d3-781f662040ad
 plot_sum([src.sierpinski_carpet()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ f4820474-a6a0-487f-a2c5-096e1a1c0e70
-plot_sum([src.sierpinski_carpet()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum(
+    [src.sierpinski_carpet()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true
+)
 
 # ╔═╡ e436f2e5-95c8-4e39-88ec-7fce79d55877
 plot_sum([src.koch_snowflake()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ 8568010f-d73c-4b4d-99f7-d331fe7cf76f
-plot_sum([src.koch_snowflake()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum(
+    [src.koch_snowflake()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true
+)
 
 # ╔═╡ cfc8f02d-fca2-44da-be98-461b10152ec7
 plot_sum([src.gosper_flowsnake()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ 8810e074-f776-4de7-ba2a-7e9438da9e55
-plot_sum([src.gosper_flowsnake()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum(
+    [src.gosper_flowsnake()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true
+)
 
 # ╔═╡ 2fc2dd0d-7960-4e7d-906e-dbf2c8bc885a
 plot_sum([src.durer_pentagon()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ 4347ed03-d6ec-4cf5-9255-2fd6fa61c97d
-plot_sum([src.durer_pentagon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum(
+    [src.durer_pentagon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true
+)
 
 # ╔═╡ 1fd8c1f9-9f31-4fff-a4e9-3d57e26cb0f4
 plot_sum([src.fudgeflake()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ 5e13c97f-abfa-45e1-af43-b16deb16565d
-plot_sum([src.fudgeflake()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum([src.fudgeflake()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true)
 
 # ╔═╡ 7c843437-d0eb-44d7-8ffd-ab073ed95a57
 plot_sum([src.heighway_dragon()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
+
+# ╔═╡ 12d83de3-8695-4b23-bd68-76ae2b23f405
+plot_sum(
+    [src.heighway_dragon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true
+)
 
 # ╔═╡ c3400ca4-5cae-4530-8390-5a80979ac80d
 plot_sum([src.levy_dragon()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ c4822134-b393-4986-afcd-4a42c5216523
-plot_sum([src.levy_dragon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum([src.levy_dragon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true)
 
 # ╔═╡ b7e769bc-4f97-46fc-a755-bea6707545d6
 plot_sum([src.terdragon()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ aff2d174-bca3-4fad-af21-7cfa766f3796
-plot_sum([src.terdragon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum([src.terdragon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true)
 
 # ╔═╡ b4fae1ca-ea2c-4009-b3c0-852b33189418
 plot_sum([src.twindragon()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ cbc2786b-6200-4e7f-91a7-ee0fab5ad47b
-plot_sum([src.twindragon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum([src.twindragon()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true)
 
 # ╔═╡ 6411eb71-9f7c-48bd-9c2f-b2cab7ab7184
 plot_sum([src.brick_2d()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ 197f1284-25d1-421d-8efd-ac4d13e503df
-plot_sum([src.brick_2d()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum([src.brick_2d()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true)
 
 # ╔═╡ 2314de5c-db07-4d10-b17e-a8cba8d798e1
 plot_sum([src.cantor_dust_non_sym()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ 50799326-425e-4fca-88e2-8c78384aaf7a
-plot_sum([src.cantor_dust_non_sym()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum(
+    [src.cantor_dust_non_sym()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true
+)
 
 # ╔═╡ acc59a6f-a5f9-4ac3-9b26-ba5a2be5f780
 plot_sum([src.barnsley_fern()]; pts_cbt_type="Chebyshev-1", pts_cbt_max=16)
 
 # ╔═╡ 67447ed3-9cb4-4507-810c-f12bf6d4eb64
-plot_sum([src.barnsley_fern()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16)
+plot_sum([src.barnsley_fern()]; pts_cbt_type="Equispaced-1", pts_cbt_max=16, yscalelog=true)
 
 # ╔═╡ 7b5d13fe-8911-48c8-8588-b43dbab5963a
 function plot_chaos_game!(ax, sas::src.SelfAffineSet{2,Float64,4}, nb_pts::Int, α::Real)
@@ -252,10 +294,11 @@ end
 function plot_weights_2d(;
     sas::src.SelfAffineSet{2,T,4},
     pts_chaos_nb::Int,
-    α_attractor::Real,
     pts_cbt_type::String,
     pts_cbt_nb::Int,
-    α_weights::Real,
+    α_attractor::Real=1.0,
+    α_weights::Real=1.0,
+    threshold::Real=0.0,
     name::String="",
 ) where {T}
     fig = Figure(; size=(600, 600), fontsize=FONTSIZE)
@@ -264,8 +307,10 @@ function plot_weights_2d(;
     plot_chaos_game!(ax, sas, pts_chaos_nb, α_attractor)
 
     cbt = src.compute_cubature(sas, pts_cbt_type, pts_cbt_nb; maxiter=MAXITER)
-    idx_pos = findall(>(0), cbt.weights)
-    idx_neg = findall(<(0), cbt.weights)
+    W = maximum(abs.(cbt.weights))
+
+    idx_pos = findall(w -> (w > 0) && (abs(w) ≥ threshold * W), cbt.weights)
+    idx_neg = findall(w -> (w < 0) && (abs(w) ≥ threshold * W), cbt.weights)
 
     colors = Makie.to_colormap(:tab10)
     scatter!(ax, cbt.points[idx_pos]; color=(colors[3], α_weights))
@@ -274,11 +319,172 @@ function plot_weights_2d(;
     xmin, xmax, ymin, ymax = _get_limits(sas.bounding_box)
     limits!(ax, xmin, xmax, ymin, ymax)
 
-    if SAVEFIG && !isempty(name)
-        save("$name-weights-2d.pdf", fig)
+    if !isempty(name)
+        save("$name.pdf", fig)
     end
 
     return fig
+end
+
+# ╔═╡ e6a0496e-ae88-440a-a229-718fd1313a6c
+begin
+    if false
+        for N in (16, 32)
+            plot_weights_2d(;
+                sas=src.sierpinski_triangle(),
+                pts_chaos_nb=200_000,
+                α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=N,
+                α_weights=0.75,
+                name="2d-sierpinski-triangle-sans-$N-t0.0",
+            )
+            plot_weights_2d(;
+                sas=src.sierpinski_triangle(),
+                pts_chaos_nb=200_000,
+                α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=N,
+                α_weights=0.75,
+                threshold=0.25,
+                name="2d-sierpinski-triangle-sans-$N-t0.25",
+            )
+            plot_weights_2d(;
+                sas=src.sierpinski_triangle(),
+                pts_chaos_nb=200_000,
+                α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=N,
+                α_weights=0.75,
+                threshold=0.125,
+                name="2d-sierpinski-triangle-sans-$N-t0.125",
+            )
+        end
+        for N in (16, 32)
+            plot_weights_2d(;
+                sas=src.sierpinski_triangle(),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=N,
+                α_weights=0.75,
+                name="2d-sierpinski-triangle-$N-t0.0",
+            )
+            plot_weights_2d(;
+                sas=src.sierpinski_triangle(),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=N,
+                α_weights=0.75,
+                threshold=0.25,
+                name="2d-sierpinski-triangle-$N-t0.25",
+            )
+            plot_weights_2d(;
+                sas=src.sierpinski_triangle(),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=N,
+                α_weights=0.75,
+                threshold=0.125,
+                name="2d-sierpinski-triangle-$N-t0.125",
+            )
+        end
+    end
+
+    nothing
+end
+
+# ╔═╡ 286c950c-9153-4553-b529-e9c4b36b253b
+begin
+    if false
+        for N in (16, 32)
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.0,
+                name="2d-vicsek-sans-$N-t0.0",
+            )
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.25,
+                name="2d-vicsek-sans-$N-t0.25",
+            )
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.125,
+                name="2d-vicsek-sans-$N-t0.125",
+            )
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.0625,
+                name="2d-vicsek-sans-$N-t0.0625",
+            )
+        end
+        for N in (16, 32)
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.0,
+                name="2d-vicsek-$N-t0.0",
+            )
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.25,
+                name="2d-vicsek-$N-t0.25",
+            )
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.125,
+                name="2d-vicsek-$N-t0.125",
+            )
+            plot_weights_2d(;
+                sas=src.vicsek_2d(1 / 3),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=16,
+                α_weights=0.75,
+                threshold=0.0625,
+                name="2d-vicsek-$N-t0.0625",
+            )
+        end
+    end
+    nothing
 end
 
 # ╔═╡ 0420f787-d417-42d7-8a4e-c4b5f7078717
@@ -319,7 +525,6 @@ plot_weights_2d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
-    name="2d-vicsek",
 )
 
 # ╔═╡ ee205c3f-5514-42a5-8eeb-a4e1447229ad
@@ -330,7 +535,6 @@ plot_weights_2d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
-    name="2d-vicse-rot-0.4",
 )
 
 # ╔═╡ c23fea07-1737-44c9-8e0f-4d4dfbae6cfd
@@ -341,7 +545,6 @@ plot_weights_2d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
-    name="2d-vicse-rot-pio4",
 )
 
 # ╔═╡ bb4ee489-81aa-4ae8-af03-2685cec5219a
@@ -458,7 +661,7 @@ plot_weights_2d(;
 plot_weights_2d(;
     sas=src.barnsley_fern(),
     pts_chaos_nb=200_000,
-    α_attractor=0.75,
+    α_attractor=0.5,
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
@@ -468,10 +671,11 @@ plot_weights_2d(;
 function plot_weights_3d(;
     sas::src.SelfAffineSet{2,T,4},
     pts_chaos_nb::Int,
-    α_attractor::Real,
     pts_cbt_type::String,
     pts_cbt_nb::Int,
-    α_weights::Real,
+    α_attractor::Real=1.0,
+    α_weights::Real=1.0,
+    threshold::Real=0.0,
     name::String="",
 ) where {T}
     fig = Figure(; size=(800, 600), fontsize=FONTSIZE)
@@ -480,8 +684,10 @@ function plot_weights_3d(;
     plot_chaos_game!(ax, sas, pts_chaos_nb, α_attractor)
 
     cbt = src.compute_cubature(sas, pts_cbt_type, pts_cbt_nb; maxiter=MAXITER)
-    idx_pos = findall(>(0), cbt.weights)
-    idx_neg = findall(<(0), cbt.weights)
+    W = maximum(abs.(cbt.weights))
+
+    idx_pos = findall(w -> (w > 0) && (abs(w) ≥ threshold * W), cbt.weights)
+    idx_neg = findall(w -> (w < 0) && (abs(w) ≥ threshold * W), cbt.weights)
 
     colors = Makie.to_colormap(:tab10)
     for (idx, ic) in zip((findall(>(0), cbt.weights), findall(<(0), cbt.weights)), (3, 4))
@@ -501,8 +707,8 @@ function plot_weights_3d(;
     xmin, xmax, ymin, ymax = _get_limits(sas.bounding_box)
     limits!(ax, xmin, xmax, ymin, ymax, 0.0, maximum(abs.(cbt.weights)))
 
-    if SAVEFIG && !isempty(name)
-        save("$name-weights-3d.pdf", fig)
+    if !isempty(name)
+        save("$name.pdf", fig)
     end
 
     return fig
@@ -546,7 +752,6 @@ plot_weights_3d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
-    name="2d-vicsek",
 )
 
 # ╔═╡ e38481e0-c432-4220-beaa-f7912e0c56f1
@@ -557,7 +762,6 @@ plot_weights_3d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
-    name="2d-vicse-rot-0.4",
 )
 
 # ╔═╡ f2c95728-c94f-48d3-a7a8-a8816a8e0cca
@@ -568,7 +772,6 @@ plot_weights_3d(;
     pts_cbt_type="Chebyshev-1",
     pts_cbt_nb=16,
     α_weights=0.75,
-    name="2d-vicse-rot-pio4",
 )
 
 # ╔═╡ 4ab0c8f4-b370-4107-9c5b-98bc039c3df9
@@ -694,6 +897,9 @@ plot_weights_3d(;
 # ╔═╡ Cell order:
 # ╠═7970cc66-6bc9-11ef-2104-fb85cdfa2b04
 # ╠═dcd6cea7-97fd-4d94-beb6-bc1dcd96b466
+# ╠═c66d4d24-f88b-4c14-88bd-0d1296d03c43
+# ╠═e6a0496e-ae88-440a-a229-718fd1313a6c
+# ╠═286c950c-9153-4553-b529-e9c4b36b253b
 # ╠═24535836-fded-4006-9997-b1c90f7968aa
 # ╠═05dd3e7f-d975-4a2e-a81f-766b29f35911
 # ╠═0420f787-d417-42d7-8a4e-c4b5f7078717
@@ -735,6 +941,7 @@ plot_weights_3d(;
 # ╠═565d6e26-3926-46c4-a531-cf58fcd48d56
 # ╠═ae142920-e802-4842-8d87-2fcd81b8317d
 # ╠═7c843437-d0eb-44d7-8ffd-ab073ed95a57
+# ╠═12d83de3-8695-4b23-bd68-76ae2b23f405
 # ╠═de33fa02-2141-4c86-8eac-56624c2e26d3
 # ╠═a4c7afa7-75c2-431c-a7ff-c874d17248d3
 # ╠═c3400ca4-5cae-4530-8390-5a80979ac80d

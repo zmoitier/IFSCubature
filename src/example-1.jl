@@ -19,8 +19,9 @@ function cantor_set(
 
     ifs = [contractive_similarity(ρ, [c]) for (ρ, c) in zip(ρ, c)]
 
-    ball = hyper_ball((c[end] + c[1]) / 2, (c[end] - c[1]) / 2)
-    box = hyper_box((c[end] + c[1]) / 2, (c[end] - c[1]) / 2)
+    z, r = (c[end] + c[1]) / 2, (c[end] - c[1]) / 2
+    ball = HyperBall(SVector(z), r)
+    box = HyperBox(SVector(z), SMatrix{1,1}(r))
 
     return SelfAffineSet(ifs, measure, ball, box, name)
 end
