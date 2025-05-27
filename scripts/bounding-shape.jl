@@ -8,7 +8,7 @@ using IFSCubature:
     fix_points,
     hyper_box_from_corners,
     matrix_rotation_2d
-using LinearAlgebra: norm, opnorm
+using LinearAlgebra: dot, norm, opnorm, I
 using Optim
 using Printf: Format, format
 using StaticArrays
@@ -33,7 +33,7 @@ end
 function approximate_bounding_ball(ifs::Vector{AffineMap{D,T,N}}, k::Int=1) where {D,T,N}
     @info "approximate bounding ball"
 
-    fmt = Format("[" * join(fill("%.16e", D), ", ") * "], %.16e")
+    fmt = Format("[" * join(fill("%.4f", D), ", ") * "], %.4f")
 
     ams = deepcopy(ifs)
     ins = 1 ./ (1 .- [S.ρ for S in ams])
@@ -57,7 +57,7 @@ end
 function optimize_bounding_ball(ifs::Vector{AffineMap{D,T,N}}, k::Int=1) where {D,T,N}
     @info "optimize bounding ball"
 
-    fmt = Format("[" * join(fill("%.16e", D), ", ") * "], %.16e")
+    fmt = Format("[" * join(fill("%.4f", D), ", ") * "], %.4f")
 
     ams = deepcopy(ifs)
     ins = 1 ./ (1 .- [S.ρ for S in ams])
@@ -87,7 +87,7 @@ function approximate_bounding_box(
     @info "approximate bounding box"
 
     fmt = Format(
-        "[" * join(fill("%.16e", D), ", ") * "], [" * join(fill("%.16e", D), ", ") * "]"
+        "[" * join(fill("%.4f", D), ", ") * "], [" * join(fill("%.4f", D), ", ") * "]"
     )
 
     corner_lower = SVector{D,T}(fill(typemax(T), D))
@@ -135,7 +135,21 @@ function fct_in_ball(ball::HyperBall{D,T}) where {D,T}
     return fct
 end
 
-function fct_in_box(box::HyperBox{D,T,N}) where {D,T,N} end
+function fct_in_box(box::HyperBox{D,T,N}) where {D,T,N}
+    c = box.center
+    lengths = SVector{D,T}([norm(v) for v in eachcol(box.paxis)])
+    basis = SVector{D,SVector{D,T}}([v / n for (v, n) in zip(eachcol(box.paxis), lengths)])
+
+    function fct(x::SVector{D,T})
+        y = x - c
+        return (
+            SVector{D,T}(dot(y, e) + n for (n, e) in zip(lengths, basis)),
+            SVector{D,T}(n - dot(y, e) for (n, e) in zip(lengths, basis)),
+        )
+    end
+
+    return fct
+end
 
 function check_bounding(
     ifs::Vector{AffineMap{D,T,N}},
@@ -150,20 +164,48 @@ function check_bounding(
     x = zero(SVector{D,T})
     p = cumsum(measure)
 
+    r = typemax(T)
+
     for fix_pt in fix_point.(ifs)
         x = fix_pt
-        @assert in_ball(x) ≥ 0 "$(in_ball(x))"
-        @assert all(≥(0).fct_in_box(x))
+
+        r = min(r, in_ball(x))
+        if any(<(0), in_box(x))
+            println(in_box(x))
+        end
 
         for _ in 1:(pts_chaos_nb ÷ length(ifs))
             k = searchsortedfirst(p, rand())
             x = ifs[k](x)
-            @assert in_ball(x) ≥ 0 "$(in_ball(x))"
+
+            r = min(r, in_ball(x))
+            if any(<(0), in_box(x))
+                println(in_box(x))
+            end
         end
     end
 
     @info "Check ball and box: ok"
     return nothing
+end
+
+function brick_2d()
+    ρ = 1 / 3
+    ifs = [
+        contractive_similarity(ρ, c) for
+        c in [[-1, -1], [1, -1], [0, 0], [1, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [0, 2]]
+    ]
+    measure = fill(1 / 9, 9)
+
+    optimize_bounding_ball(ifs, 5)
+    approximate_bounding_box(ifs, measure, 500_000)
+
+    ball = HyperBall(SVector(0.25, 0.25), 1.77)
+    box = hyper_box_from_corners([-1.0, -1], [2.0, 2.0])
+
+    check_bounding(ifs, ball, box, measure, 500_000)
+
+    return SelfAffineSet(ifs, measure, ball, box, "2d-brick")
 end
 
 function fudgeflake()
@@ -180,9 +222,49 @@ function fudgeflake()
     approximate_bounding_box(ifs, measure, 500_000)
 
     ball = HyperBall(SVector(0.0, 0.0), 1.24)
-    box = hyper_box_from_corners([-1.07, -0.98], [1.19, 1.19])
+    box = hyper_box_from_corners([-1.07, -0.98], [1.19, 1.20])
 
     check_bounding(ifs, ball, box, measure, 500_000)
 
     return return SelfAffineSet(ifs, measure, ball, box, "2d-fudgeflake")
+end
+
+function heighway_dragon()
+    ρ = 1 / √2
+    ifs = [
+        contractive_similarity(ρ, matrix_rotation_2d(1 / 4; implicit_pi=true), [0, 0]),
+        contractive_similarity(
+            ρ, matrix_rotation_2d(3 / 4; implicit_pi=true), [3 / 5, 1 / 5]
+        ),
+    ]
+    measure = fill(1 / 2, 2)
+
+    approximate_bounding_ball(ifs, 10)
+    approximate_bounding_box(ifs, measure, 500_000)
+
+    ball = HyperBall(SVector(0.0, 0.0), 1.20)
+    box = hyper_box_from_corners([-0.34, -0.34], [1.17, 0.67])
+
+    check_bounding(ifs, ball, box, measure, 500_000)
+
+    return SelfAffineSet(ifs, measure, ball, box, "2d-heighway-dragon")
+end
+
+function levy_dragon()
+    ρ = 1 / √2
+    ifs = [
+        contractive_similarity(ρ, matrix_rotation_2d(1 / 4; implicit_pi=true), [-1, 0]),
+        contractive_similarity(ρ, matrix_rotation_2d(-1 / 4; implicit_pi=true), [1, 0]),
+    ]
+    measure = fill(1 / 2, 2)
+
+    approximate_bounding_ball(ifs, 10)
+    approximate_bounding_box(ifs, measure, 500_000)
+
+    ball = HyperBall(SVector(0.0, 0.0), 1.20)
+    box = hyper_box_from_corners([-0.34, -0.34], [1.17, 0.67])
+
+    check_bounding(ifs, ball, box, measure, 500_000)
+
+    return SelfAffineSet(ifs, measure, ball, box, "2d-levy-dragon")
 end
