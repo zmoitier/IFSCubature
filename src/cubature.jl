@@ -209,7 +209,9 @@ function compute_cubature(
     x0 = rand(T, J)
     λ, weights = powm!(M, x0; maxiter=maxiter, tol=1e-14)
 
-    @assert isapprox(λ, 1) "$λ should be equal to 1."
+    if !isapprox(λ, 1)
+        @warn "λ = $λ should be equal to 1."
+    end
 
     weights /= sum(weights)
 

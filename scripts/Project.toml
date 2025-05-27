@@ -1,0 +1,5 @@
+[deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+IFSCubature = "9e96415c-954e-44bc-b66e-d49729290fe4"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

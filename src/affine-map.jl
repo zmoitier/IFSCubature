@@ -29,7 +29,7 @@ function (f::AffineMap{1,T,1})(x::T)::T where {T}
     return f.A[1, 1] * x + f.b[1]
 end
 
-function (f::AffineMap{D,T,N})(x::Union{SVector{D,T},MVector{D,T}}) where {D,T,N}
+function (f::AffineMap{D,T,N})(x::Union{SVector{D,V},MVector{D,V}}) where {D,T,N,V}
     return f.A * x + f.b
 end
 

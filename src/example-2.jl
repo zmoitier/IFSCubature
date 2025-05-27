@@ -10,8 +10,8 @@ function triangle()
         push!(ifs, contractive_similarity(0.5, c))
     end
 
-    ball = hyper_ball(fill(0.0, 2), 1.0)
-    box = hyper_box([0.25, 0], Matrix(Diagonal([0.75, √3 / 2])))
+    ball = HyperBall(SVector(0.0, 0.0), 1.0)
+    box = HyperBox(SVector(0.25, 0.0), SMatrix{2,2}(0.75, 0.0, 0.0, √3 / 2))
 
     return SelfAffineSet(ifs, fill(1 / 4, 4), ball, box, "2d-triangle")
 end
@@ -30,8 +30,8 @@ function sierpinski_triangle(contraction_factor::Union{Float64,Nothing}=nothing)
         contractive_similarity(ρ, c) for c in [[1.0, 0.0], [-0.5, √3 / 2], [-0.5, -√3 / 2]]
     ]
 
-    ball = hyper_ball(fill(0.0, 2), 1.0)
-    box = hyper_box([0.25, 0], Matrix(Diagonal([0.75, √3 / 2])))
+    ball = HyperBall(SVector(0.0, 0.0), 1.0)
+    box = HyperBox(SVector(0.25, 0.0), SMatrix{2,2}(0.75, 0.0, 0.0, √3 / 2))
 
     return SelfAffineSet(ifs, fill(1 / 3, 3), ball, box, "2d-sierpinski-triangle")
 end
@@ -49,8 +49,8 @@ function sierpinski_triangle_fat(n::Int)
         contractive_similarity(ρ, c) for c in [[1.0, 0.0], [-0.5, √3 / 2], [-0.5, -√3 / 2]]
     ]
 
-    ball = hyper_ball(fill(0.0, 2), 1.0)
-    box = hyper_box([0.25, 0], Matrix(Diagonal([0.75, √3 / 2])))
+    ball = HyperBall(SVector(0.0, 0.0), 1.0)
+    box = HyperBox(SVector(0.25, 0.0), SMatrix{2,2}(0.75, 0.0, 0.0, √3 / 2))
 
     return SelfAffineSet(ifs, fill(1 / 3, 3), ball, box, "2d-sierpinski-triangle-fat")
 end
@@ -75,8 +75,8 @@ function vicsek_2d(contraction_factor::Float64, angle::Union{Float64,Nothing}=no
         push!(ifs, contractive_similarity(contraction_factor, [v for v in c]))
     end
 
-    ball = hyper_ball(fill(0.0, 2), √2)
-    box = hyper_box(fill(0.0, 2), Matrix(Diagonal(fill(1.0, 2))))
+    ball = HyperBall(SVector(0.0, 0.0), √2)
+    box = HyperBox(SVector(0.0, 0.0), SMatrix{2,2}(1.0, 0.0, 0.0, 1.0))
 
     return SelfAffineSet(ifs, fill(1 / 5, 5), ball, box, name)
 end
@@ -89,8 +89,8 @@ function sierpinski_carpet()
         c in [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]
     ]
 
-    ball = hyper_ball(fill(0.0, 2), √2)
-    box = hyper_box(fill(0.0, 2), Matrix(Diagonal(fill(1.0, 2))))
+    ball = HyperBall(SVector(0.0, 0.0), √2)
+    box = HyperBox(SVector(0.0, 0.0), SMatrix{2,2}(1.0, 0.0, 0.0, 1.0))
 
     return SelfAffineSet(ifs, fill(1 / 8, 8), ball, box, "2d-sierpinski-carpet")
 end
@@ -106,8 +106,8 @@ function koch_snowflake()
         push!(ifs, contractive_similarity(ρ, [c, s]))
     end
 
-    ball = hyper_ball(fill(0.0, 2), 1.0)
-    box = hyper_box(fill(0.0, 2), Matrix(Diagonal([1.0, √3 / 2])))
+    ball = HyperBall(SVector(0.0, 0.0), 1.0)
+    box = HyperBox(SVector(0.0, 0.0), SMatrix{2,2}(1.0, 0.0, 0.0, √3 / 2))
 
     μ = [1 / 3, fill(1 / 9, 6)...]
 
@@ -124,8 +124,8 @@ function gosper_flowsnake()
         push!(ifs, contractive_similarity(ρ, R, [c, s]))
     end
 
-    ball = hyper_ball(fill(0.0, 2), √3 / (√7 - 1))
-    box = hyper_box(fill(0.0, 2), Matrix(Diagonal(fill(ball.radius, 2))))
+    ball = HyperBall(SVector(0.0, 0.0), √3 / (√7 - 1))
+    box = HyperBox(SVector(0.0, 0.0), SMatrix{2,2}(ball.radius, 0.0, 0.0, ball.radius))
 
     return SelfAffineSet(ifs, fill(1 / 7, 7), ball, box, "2d-gosper-flowsnake")
 end
