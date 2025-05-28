@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.9
 
 using Markdown
 using InteractiveUtils
@@ -78,9 +78,10 @@ function plot_chaos_game!(ax, sas::src.SelfAffineSet{2,Float64,4}, nb_pts::Int, 
 end
 
 # ╔═╡ 0a1f6f87-f80c-4aaf-9162-3495b00152c1
-function plot_vicsek(pts_chaos_nb::Int, α_attractor::Real)
+function plot_vicsek(xs_list::Vector{Vector{Float64}}, pts_chaos_nb::Int, α_attractor::Real)
     fig = Figure(; size=(600, 400), fontsize=FONTSIZE)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"x", ylabel=L"y")
+    limits!(ax, -2.05, 1.05, -1.05, 1.05)
 
     poly!(
         ax,
@@ -91,21 +92,23 @@ function plot_vicsek(pts_chaos_nb::Int, α_attractor::Real)
     sas = src.vicsek_2d(1 / 3)
     plot_chaos_game!(ax, sas, pts_chaos_nb, α_attractor)
 
-    for (x, c) in zip((-2, -1.4, -1.2), Makie.to_colormap(:tab10))
-        scatter!(ax, [x], [-0.1]; color=c, markersize=16)
-    end
+    colors, i = Makie.to_colormap(:tab10), 0
+    for xs in xs_list
+        for x in xs
+            i += 1
+            scatter!(ax, [x], [-0.1]; color=colors[i], markersize=16)
+        end
 
-    limits!(ax, -2.05, 1.05, -1.05, 1.05)
-
-    if SAVEFIG
-        save("2d-vicsek-singular.pdf", fig)
+        if SAVEFIG
+            save("2d-vicsek-singular-$i.pdf", fig)
+        end
     end
 
     return fig
 end
 
 # ╔═╡ 26308e9f-52b5-465b-b121-96ee8c50aab3
-plot_vicsek(200_000, 0.75)
+plot_vicsek([[-2.0], [-1.4, -1.2], [-1.0, -0.67]], 200_000, 0.75)
 
 # ╔═╡ 033139d9-6c56-4e10-924f-306c0b2fa627
 function green_kernel(k, x, y)
@@ -190,7 +193,7 @@ function relative_error(result::Number, reference::Number)
 end
 
 # ╔═╡ fe3d2924-9fd2-4fd9-b0e3-6522e1d95edf
-function plot_vicsek_pv_sing()
+function plot_vicsek_pv_sing(xs_list::Vector{Vector{Float64}})
     fig = Figure(; fontsize=FONTSIZE)
     ax = Axis(fig[1, 1]; xlabel=L"$\sqrt{N}$", yscale=log10, ylabel=L"$$relative error")
     ylims!(ax, 1e-16, 1)
@@ -200,30 +203,34 @@ function plot_vicsek_pv_sing()
     Np = 750
     f_diam = 1 / 100
 
-    for (x, c) in zip((-2, -1.4, -1.2), Makie.to_colormap(:tab10))
-        y = SVector(x, -0.1)
-        fct = z -> green_kernel(k, z, y)
+    colors, i = Makie.to_colormap(:tab10), 0
+    for xs in xs_list
+        for x in xs
+            i += 1
+            y = SVector(x, -0.1)
+            fct = z -> green_kernel(k, z, y)
 
-        result, precision = reference_h(fct; sas=sas, nb_pts_cbt=15, f_diam=f_diam / 2)
-        @show precision
+            result, precision = reference_h(fct; sas=sas, nb_pts_cbt=15, f_diam=f_diam / 2)
+            @show precision
 
-        nb_pts, h, val = sequence_p_version(fct; sas=sas, nb_pts_max=Np)
+            nb_pts, h, val = sequence_p_version(fct; sas=sas, nb_pts_max=Np)
 
-        scatterlines!(ax, sqrt.(nb_pts), relative_error.(val, result); color=c)
-    end
+            scatterlines!(ax, sqrt.(nb_pts), relative_error.(val, result); color=colors[i])
+        end
 
-    if SAVEFIG
-        save("2d-vicsek-singular-pv.pdf", fig)
+        if SAVEFIG
+            save("2d-vicsek-singular-pv-$i.pdf", fig)
+        end
     end
 
     return fig
 end
 
 # ╔═╡ 946a27ef-d769-4251-b032-85bba79f6a16
-plot_vicsek_pv_sing()
+plot_vicsek_pv_sing([[-2.0], [-1.4, -1.2], [-1.0, -0.67]])
 
 # ╔═╡ fa0b805f-6b2e-4828-bded-6c150e95b5d0
-function plot_vicsek_hv_sing()
+function plot_vicsek_hv_sing(xs_list::Vector{Vector{Float64}})
     fig = Figure(; fontsize=FONTSIZE)
     ax = Axis(
         fig[1, 1]; xscale=log10, xlabel=L"$h$", yscale=log10, ylabel=L"$$relative error"
@@ -234,33 +241,39 @@ function plot_vicsek_hv_sing()
     k = 5.0
     f_diam = 1 / 100
 
-    for (x, c) in zip((-2, -1.4, -1.2), Makie.to_colormap(:tab10))
-        y = SVector(x, -0.1)
-        fct = z -> green_kernel(k, z, y)
+    colors, i = Makie.to_colormap(:tab10), 0
+    for xs in xs_list
+        for x in xs
+            i += 1
+            y = SVector(x, -0.1)
+            fct = z -> green_kernel(k, z, y)
 
-        result, precision = reference_h(fct; sas=sas, nb_pts_cbt=15, f_diam=f_diam / 2)
-        @show precision
+            result, precision = reference_h(fct; sas=sas, nb_pts_cbt=15, f_diam=f_diam / 2)
+            @show precision
 
-        for deg in (3, 5)
-            nb_pts, h, val = sequence_h_version(
-                fct;
-                sas=sas,
-                cbt=src.compute_cubature(sas, POINTTYPE, deg; maxiter=MAXITER),
-                f_diam,
-            )
-            scatterlines!(ax, h, relative_error.(val, result); color=c, linestyle=:dash)
+            for deg in (3, 5)
+                nb_pts, h, val = sequence_h_version(
+                    fct;
+                    sas=sas,
+                    cbt=src.compute_cubature(sas, POINTTYPE, deg; maxiter=MAXITER),
+                    f_diam,
+                )
+                scatterlines!(
+                    ax, h, relative_error.(val, result); color=colors[i], linestyle=:dash
+                )
+            end
         end
-    end
 
-    if SAVEFIG
-        save("2d-vicsek-singular-hv.pdf", fig)
+        if SAVEFIG
+            save("2d-vicsek-singular-hv-$i.pdf", fig)
+        end
     end
 
     return fig
 end
 
 # ╔═╡ 4e1fac1c-74f2-48d1-8548-4de3451f150a
-plot_vicsek_hv_sing()
+plot_vicsek_hv_sing([[-2.0], [-1.4, -1.2], [-1.0, -0.67]])
 
 # ╔═╡ 84b0789e-c142-45d0-8b26-d806a602ebbc
 function plot_vicsek_pv()

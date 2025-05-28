@@ -1,4 +1,5 @@
 [deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 IFSCubature = "9e96415c-954e-44bc-b66e-d49729290fe4"
-Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

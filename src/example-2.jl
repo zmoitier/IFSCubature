@@ -71,9 +71,7 @@ function vicsek_2d(contraction_factor::Float64, angle::Union{Float64,Nothing}=no
         name *= "-rot"
     end
 
-    ifs::Vector{AffineMap{2,Float64,4}} = [
-        contractive_similarity(contraction_factor, Ri, fill(0.0, 2))
-    ]
+    ifs = [contractive_similarity(contraction_factor, Ri, fill(0.0, 2))]
     for c in product([-1, 1], [-1, 1])
         push!(ifs, contractive_similarity(contraction_factor, [v for v in c]))
     end
@@ -193,7 +191,7 @@ function heighway_dragon()
     ]
     measure = fill(1 / 2, 2)
 
-    ball = HyperBall(SVector(0.0, 0.0), 1.20)
+    ball = HyperBall(SVector(0.41, 0.09), 0.80)
     box = hyper_box_from_corners([-0.34, -0.34], [1.17, 0.67])
 
     return SelfAffineSet(ifs, measure, ball, box, "2d-heighway-dragon")
@@ -206,11 +204,12 @@ function levy_dragon()
         contractive_similarity(ρ, matrix_rotation_2d(1 / 4; implicit_pi=true), [-1, 0]),
         contractive_similarity(ρ, matrix_rotation_2d(-1 / 4; implicit_pi=true), [1, 0]),
     ]
+    measure = fill(1 / 2, 2)
 
-    ball = bounding_ball(ifs; k=7)
-    box = hyper_box(ball.center, Diagonal(fill(ball.radius, 2)))
+    ball = HyperBall(SVector(0.0, 0.5), 2.07)
+    box = hyper_box_from_corners([-2.0, -0.5], [2.0, 2.0])
 
-    return SelfAffineSet(ifs, fill(1 / 2, 2), ball, box, "2d-levy-dragon")
+    return SelfAffineSet(ifs, measure, ball, box, "2d-levy-dragon")
 end
 
 """Return the Terdragon."""
@@ -220,11 +219,12 @@ function terdragon()
     xs = [-1, 0, 1]
 
     ifs = [contractive_similarity(ρ, R, [x, 0]) for (R, x) in zip(Rs, xs)]
+    measure = fill(1 / 3, 3)
 
-    ball = bounding_ball(ifs; k=5)
-    box = bounding_box(ifs; k=7)
+    ball = HyperBall(SVector(0.0, 0.0), 1.15)
+    box = hyper_box_from_corners([-1.13, -0.65], [1.13, 0.65])
 
-    return SelfAffineSet(ifs, fill(1 / 3, 3), ball, box, "2d-terdragon")
+    return SelfAffineSet(ifs, measure, ball, box, "2d-terdragon")
 end
 
 """Return the Twindragon."""
@@ -233,11 +233,12 @@ function twindragon()
     R = matrix_rotation_2d(1 / 4; implicit_pi=true)
 
     ifs = [contractive_similarity(ρ, R, [x, 0]) for x in [-1, 1]]
+    measure = fill(1 / 2, 2)
 
-    ball = bounding_ball(ifs; k=4)
-    box = hyper_box(ball.center, Diagonal(fill(ball.radius, 2)))
+    ball = HyperBall(SVector(0.0, 0.0), 1.80)
+    box = hyper_box_from_corners([-1.67, -1.34], [1.67, 1.34])
 
-    return SelfAffineSet(ifs, fill(1 / 2, 2), ball, box, "2d-twindragon")
+    return SelfAffineSet(ifs, measure, ball, box, "2d-twindragon")
 end
 
 """Return a nonsymmetric Cantor dust."""
@@ -253,11 +254,11 @@ function cantor_dust_non_sym()
 
     ifs = [contractive_similarity(r, M, v) for (r, M, v) in zip(rs, Ms, vs)]
 
-    ball = bounding_ball(ifs; k=4)
-    box = bounding_box(ifs; k=5)
-
     d = similarity_dimension(ifs)
     measure = [S.ρ for S in ifs] .^ d
+
+    ball = HyperBall(SVector(-0.10, 0.10), 1.79)
+    box = hyper_box_from_corners([-1.58, -1.11], [1.28, 1.31])
 
     return SelfAffineSet(ifs, measure, ball, box, "2d-cantor-non-sym")
 end
@@ -270,13 +271,10 @@ function barnsley_fern()
         affine_map([0.2 -0.26; 0.23 0.22], [0.0, 1.6]),
         affine_map([-0.15 0.28; 0.26 0.24], [0.0, 0.44]),
     ]
-
-    ball = bounding_ball(ifs; k=3)
-    box = hyper_box(ball.center, [ball.radius 0; 0 ball.radius])
-
-    # d = dimension(ifs)[1]
-    # measure = [svdvals(S.A)[end] for S in ifs] .^ d
     measure = [0.01, 0.85, 0.07, 0.07]
+
+    ball = HyperBall(SVector(1.35, 5.07), 5.25)
+    box = hyper_box_from_corners([-2.19, 0.0], [2.66, 10.0])
 
     return SelfAffineSet(ifs, measure, ball, box, "2d-barnsley-fern")
 end

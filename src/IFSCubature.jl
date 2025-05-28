@@ -1,16 +1,16 @@
 module IFSCubature
 
+import Base: length
+
+using DataStructures: BinaryHeap
+using FastGaussQuadrature: gausslegendre, gausslobatto
+using IterTools: partition, product
+using IterativeSolvers: powm!
 using LinearAlgebra
+using Roots: Brent, find_zero
 using StaticArrays
 
-import Base: length
-import DataStructures: BinaryHeap
-import FastGaussQuadrature: gausslegendre, gausslobatto
-import IterativeSolvers: powm!
-import IterTools: partition, product
-import Roots: Brent, find_zero
-
-using Optim: Optim
+const Float = float(Int)
 
 include("affine-map.jl")
 include("shapes.jl")

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.9
 
 using Markdown
 using InteractiveUtils
@@ -335,6 +335,16 @@ begin
                 sas=src.sierpinski_triangle(),
                 pts_chaos_nb=200_000,
                 α_attractor=0.0,
+                pts_cbt_type="Chebyshev-1",
+                pts_cbt_nb=N,
+                α_weights_pos=0.0,
+                α_weights_neg=0.75,
+                name="2d-sierpinski-triangle-neg-sans-$N-t0.0",
+            )
+            plot_weights_2d(;
+                sas=src.sierpinski_triangle(),
+                pts_chaos_nb=200_000,
+                α_attractor=0.25,
                 pts_cbt_type="Chebyshev-1",
                 pts_cbt_nb=N,
                 α_weights_pos=0.0,
