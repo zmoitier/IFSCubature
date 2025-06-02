@@ -68,19 +68,30 @@ end
 # ╔═╡ c66d4d24-f88b-4c14-88bd-0d1296d03c43
 begin
     if false
-        plot_sum(
-            [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
-            pts_cbt_type="Chebyshev-1",
-            pts_cbt_max=32,
-            name="2d-vicsek-chebyshev",
-        )
-        plot_sum(
-            [src.vicsek_2d(1 / 3), src.vicsek_2d(1 / 3, 0.4), src.vicsek_2d(1 / 3, π / 4)];
-            pts_cbt_type="Equispaced-1",
-            pts_cbt_max=16,
-            yscalelog=true,
-            name="2d-vicsek-equispaced",
-        )
+        for (Name, pts_cbt_max, yscalelog) in
+            (("Chebyshev", 32, false), ("Equispaced", 32, true))
+            name = lowercase(Name)
+
+            plot_sum(
+                [src.vicsek_2d(1 / 3)];
+                pts_cbt_type="$Name-1",
+                pts_cbt_max=pts_cbt_max,
+                yscalelog=yscalelog,
+                name="2d-vicsek-$name",
+            )
+
+            plot_sum(
+                [
+                    src.vicsek_2d(1 / 3),
+                    src.vicsek_2d(1 / 3, 0.4),
+                    src.vicsek_2d(1 / 3, π / 4),
+                ];
+                pts_cbt_type="$Name-1",
+                pts_cbt_max=pts_cbt_max,
+                yscalelog=yscalelog,
+                name="2d-vicsek-$name-rot",
+            )
+        end
     end
 
     nothing

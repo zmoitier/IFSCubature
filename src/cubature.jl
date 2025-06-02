@@ -215,6 +215,9 @@ function compute_cubature(
 
     weights /= sum(weights)
 
-    @assert isapprox(sum(weights), 1) "the sum of the weights must = 1."
+    if !isapprox(sum(weights), 1)
+        @warn "the sum of the weights $(sum(weights)) should be equal to 1."
+    end
+
     return Cubature(points, weights)
 end

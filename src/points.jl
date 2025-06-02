@@ -3,7 +3,7 @@ function equispaced_points(nb_points::Int; kind::Int=1)
 
     if kind == 1 # no end points
         @assert nb_points ≥ 1 "nb_points = $nb_points must be ≥ 1."
-        float.(range(-n, n; step=2) .// nb_points)
+        return float.(range(-n, n; step=2) .// nb_points)
     end
 
     if kind == 2 # with end points
@@ -11,7 +11,7 @@ function equispaced_points(nb_points::Int; kind::Int=1)
         return float.(range(-n, n; step=2) .// n)
     end
 
-    @error "kind must be 1 or 2."
+    @error "equispaced points kind must be 1 or 2."
 end
 
 function chebyshev_points(nb_points::Int; kind::Int=1)
@@ -27,7 +27,7 @@ function chebyshev_points(nb_points::Int; kind::Int=1)
         return cospi.(range(n, 0; step=-1) .// n)
     end
 
-    @error "kind must be 1 or 2."
+    @error "chebyshev points kind must be 1 or 2."
 end
 
 function gausslegendre_points(nb_points::Int)
