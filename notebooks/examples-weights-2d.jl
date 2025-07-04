@@ -301,6 +301,35 @@ function _get_limits(box::src.HyperBox{2,T,4}) where {T}
     return (xmin - h, xmax + h, ymin - h, ymax + h)
 end
 
+# ╔═╡ abf08cbd-fae7-4bce-a06f-4b773de8baa8
+begin
+    if false
+        function plot_points(pts_cbt_type::String)
+            sas = src.sierpinski_triangle()
+
+            fig = Figure(; size=(600, 600), fontsize=FONTSIZE, backgroundcolor=:transparent)
+            ax = Axis(
+                fig[1, 1]; aspect=1, xlabel=L"x", ylabel=L"y", backgroundcolor=:transparent
+            )
+
+            cbt = src.compute_cubature(sas, pts_cbt_type, 7; maxiter=MAXITER)
+
+            colors = Makie.to_colormap(:tab10)
+            scatter!(ax, cbt.points; color=:black)
+
+            xmin, xmax, ymin, ymax = _get_limits(sas.bounding_box)
+            limits!(ax, xmin, xmax, ymin, ymax)
+
+            save("$(lowercase(pts_cbt_type)).png", fig)
+
+            return nothing
+        end
+
+        plot_points("Equispaced-1")
+        plot_points("Chebyshev-1")
+    end
+end
+
 # ╔═╡ cfcd7ec2-6c6b-4400-b9fd-0bc8df2059ac
 function plot_weights_2d(;
     sas::src.SelfAffineSet{2,T,4},
@@ -971,6 +1000,7 @@ plot_weights_3d(;
 # ╔═╡ Cell order:
 # ╠═7970cc66-6bc9-11ef-2104-fb85cdfa2b04
 # ╠═dcd6cea7-97fd-4d94-beb6-bc1dcd96b466
+# ╠═abf08cbd-fae7-4bce-a06f-4b773de8baa8
 # ╠═c66d4d24-f88b-4c14-88bd-0d1296d03c43
 # ╠═e6a0496e-ae88-440a-a229-718fd1313a6c
 # ╠═286c950c-9153-4553-b529-e9c4b36b253b
