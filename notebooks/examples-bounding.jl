@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.9
+# v0.20.19
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +17,7 @@ end
 
 # ╔═╡ ae4553bc-6cc2-4595-805f-c42dcd1b8573
 function plot_bounding_3d(;
-    sas::src.SelfAffineSet{3,T,9}, p_max::Int=0, nb_pts_chaos=1024, α_attractor::Real=0.75
+    sas::src.SelfAffineSet{3,T,9}, p_max::Int=0, nb_pts_chaos=10_000, α_attractor::Real=0.75
 ) where {T} end
 
 # ╔═╡ 5fd68c56-a139-4fb3-952a-a42b05f15f33
@@ -74,7 +74,7 @@ end
 
 # ╔═╡ e77088ae-f27b-4b6c-bd1c-881068a95e3b
 function plot_bounding_2d(;
-    sas::src.SelfAffineSet{2,T,4}, p_max::Int=0, nb_pts_chaos=1024, α_attractor::Real=0.75
+    sas::src.SelfAffineSet{2,T,4}, p_max::Int=0, nb_pts_chaos=10_000, α_attractor::Real=0.75
 ) where {T}
     colors = Makie.wong_colors()
 
@@ -111,9 +111,7 @@ function plot_bounding_2d(;
 end
 
 # ╔═╡ 3f57b6f2-9e65-4ede-a0ef-c4b042831e60
-plot_bounding_2d(;
-    sas=src.cantor_dust(1 / 3, [-1.0, 1.0], 2), p_max=0, nb_pts_chaos=100_000
-)
+plot_bounding_2d(; sas=src.cantor_dust(1 / 3, [-1.0, 1.0], 2), p_max=0)
 
 # ╔═╡ 35b630b2-ee17-4708-a0b5-9a68e2137fa8
 plot_bounding_2d(; sas=src.sierpinski_triangle(), p_max=0, α_attractor=0.75)

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.20.19
 
 using Markdown
 using InteractiveUtils
@@ -115,7 +115,7 @@ plot_refine(
 plot_refine(
     src.koch_snowflake(),
     src.Polygon([[v for v in reverse(sincospi(2 * i//6))] for i in 0:5]),
-    5,
+    4,
 )
 
 # ╔═╡ 29cc3ac3-765a-47dd-96dc-27748d56cb53
