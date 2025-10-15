@@ -27,11 +27,11 @@ begin
     const MAXITER = 2000
 
     #! Data generation
-    const SAVEDATA = true # take some time
+    const SAVEDATA = false # take some time
 
     #! Ploting constants
-    const ADDTITLE = false
-    const SAVEPLOT = true
+    const ADDTITLE = true
+    const SAVEPLOT = false
     const FONTSIZE = 20
 
     "Global parameters"
