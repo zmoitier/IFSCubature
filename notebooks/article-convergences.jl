@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.19
 
 using Markdown
 using InteractiveUtils
@@ -237,7 +237,15 @@ function vicsek_2d_pv()
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
-    x_min, x_max = typemax(Int), 0
+    x = range(2, 800, 128)
+    lines!(
+        ax,
+        x,
+        exp.(-1.3 .* .√x);
+        color=:black,
+        label=L"\mathcal{O}(\mathrm{e}^{- \mathcal{O}(\sqrt{M})})",
+    )
+
     for (s, m, leg) in [
         ("", :circle, L"\theta = 0"),
         ("-rot-0.4", :cross, L"\theta = 0.4"),
@@ -253,12 +261,9 @@ function vicsek_2d_pv()
         scatterlines!(
             ax, nb_pts, relative_error.(val, val_ref); marker=m, linestyle=:dash, label=leg
         )
-
-        x_min = min(x_min, nb_pts[1])
-        x_max = max(x_max, nb_pts[end])
     end
 
-    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
+    limits!(ax, (-10, 800), (1e-16, 10))
     axislegend(ax; position=:lb)
 
     if SAVEPLOT
@@ -364,7 +369,7 @@ function other_example_pv()
         )
     end
 
-    limits!(ax, (0, 800), (1e-16, 10))
+    limits!(ax, (-10, 800), (1e-16, 10))
     axislegend(ax; position=:rt, backgroundcolor=(:white, 0))
 
     if SAVEPLOT
@@ -547,7 +552,7 @@ function barnsley_fern_pv()
         ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
     )
 
-    limits!(ax, (0, 800), (1e-3, 20))
+    limits!(ax, (-10, 800), (1e-3, 20))
 
     if SAVEPLOT
         save("2d-barnsley-fern-pv.pdf", fig)
@@ -624,7 +629,7 @@ function cantor_dust_sing_pv()
     end
     ax = Axis(fig[1, 1]; ax_args...)
 
-    x = range(0, 800, 128)
+    x = range(2, 800, 128)
     lines!(
         ax,
         x,
@@ -661,7 +666,7 @@ function cantor_dust_sing_pv()
         )
     end
 
-    limits!(ax, (0, 800), (1e-16, 10))
+    limits!(ax, (-10, 800), (1e-16, 10))
     axislegend(ax; position=:lb)
 
     if SAVEPLOT
