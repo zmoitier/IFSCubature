@@ -27,11 +27,11 @@ begin
     const MAXITER = 2000
 
     #! Data generation
-    const SAVEDATA = false # take some time
+    const SAVEDATA = true # take some time
 
     #! Ploting constants
-    const ADDTITLE = true
-    const SAVEPLOT = false
+    const ADDTITLE = false
+    const SAVEPLOT = true
     const FONTSIZE = 20
 
     "Global parameters"
@@ -284,9 +284,9 @@ function vicsek_2d_hv()
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 3e-4), (3, 5e-9), (5, 5e-14)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -390,9 +390,9 @@ function other_example_hv()
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 2e-3), (3, 3e-8), (5, 5e-13)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -484,9 +484,9 @@ function vicsek_3d_hv()
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 2e-4), (3, 1e-8), (5, 3e-13)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -571,10 +571,10 @@ function barnsley_fern_hv()
     ax = Axis(fig[1, 1]; ax_args...)
 
     h = [1e-1, 4e-1]
-    for (k, y) in [(1, 1e-2), (3, 5e-6), (5, 2e-9)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
+    for (k, y) in [(1, 8e-3), (3, 5e-7), (5, 1e-10)]
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -600,7 +600,7 @@ function barnsley_fern_hv()
         )
     end
 
-    limits!(ax, (8e-2, 15), (1e-10, 20))
+    limits!(ax, (8e-2, 15), (1e-12, 20))
     axislegend(ax; position=:rb)
 
     if SAVEPLOT
@@ -687,9 +687,9 @@ function cantor_dust_sing_hv()
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 4e-4), (3, 8e-8), (5, 3e-12)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
