@@ -196,6 +196,40 @@ function check_bounding(
     return nothing
 end
 
+function approximate_stable_bounding_box(
+    ifs::Vector{AffineMap{D,T,N}}, n::Int
+) where {D,T,N}
+    @info "approximate stable bounding box"
+
+    fmt = Format(
+        "[" * join(fill("%.4f", D), ", ") * "], [" * join(fill("%.4f", D), ", ") * "]"
+    )
+
+    _min = SVector{D,T}(fill(typemax(T), D))
+    _max = SVector{D,T}(fill(typemin(T), D))
+
+    for c in fix_point.(ifs)
+        _min = min.(c, _min)
+        _max = max.(c, _max)
+    end
+
+    println(format(fmt, _min..., _max...))
+
+    for _ in 1:n
+        for S in ifs
+            for x in (_min, SVector(_min[1], _max[2]), SVector(_max[1], _min[2]), _max)
+                y = S(x)
+                _min = min.(y, _min)
+                _max = max.(y, _max)
+            end
+        end
+        println(format(fmt, _min..., _max...))
+    end
+
+    println()
+    return nothing
+end
+
 function brick_2d()
     ρ = 1 / 3
     ifs = [
@@ -206,6 +240,7 @@ function brick_2d()
 
     optimize_bounding_ball(ifs, 5)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 2)
 
     ball = HyperBall(SVector(0.25, 0.25), 1.77)
     box = hyper_box_from_corners([-1.0, -1], [2.0, 2.0])
@@ -227,6 +262,7 @@ function fudgeflake()
 
     approximate_bounding_ball(ifs, 10)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 20)
 
     ball = HyperBall(SVector(0.0, 0.0), 1.24)
     box = hyper_box_from_corners([-1.07, -0.98], [1.19, 1.20])
@@ -248,6 +284,7 @@ function heighway_dragon()
 
     optimize_bounding_ball(ifs, 10)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 10)
 
     ball = HyperBall(SVector(0.41, 0.09), 0.80)
     box = hyper_box_from_corners([-0.34, -0.34], [1.17, 0.67])
@@ -267,6 +304,7 @@ function levy_dragon()
 
     optimize_bounding_ball(ifs, 10)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 10)
 
     ball = HyperBall(SVector(0.0, 0.5), 2.07)
     box = hyper_box_from_corners([-2.0, -0.5], [2.0, 2.0])
@@ -286,6 +324,7 @@ function terdragon()
 
     approximate_bounding_ball(ifs, 8)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 10)
 
     ball = HyperBall(SVector(0.0, 0.0), 1.15)
     box = hyper_box_from_corners([-1.13, -0.65], [1.13, 0.65])
@@ -304,6 +343,7 @@ function twindragon()
 
     approximate_bounding_ball(ifs, 10)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 10)
 
     ball = HyperBall(SVector(0.0, 0.0), 1.80)
     box = hyper_box_from_corners([-1.67, -1.34], [1.67, 1.34])
@@ -330,6 +370,7 @@ function cantor_dust_non_sym()
 
     optimize_bounding_ball(ifs, 5)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 10)
 
     ball = HyperBall(SVector(-0.10, 0.10), 1.79)
     box = hyper_box_from_corners([-1.58, -1.11], [1.28, 1.31])
@@ -350,6 +391,7 @@ function barnsley_fern()
 
     optimize_bounding_ball(ifs, 5)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 40)
 
     ball = HyperBall(SVector(1.35, 5.07), 5.25)
     box = hyper_box_from_corners([-2.19, 0.0], [2.66, 10.0])
@@ -399,6 +441,7 @@ function brick_3d()
 
     optimize_bounding_ball(ifs, 3)
     approximate_bounding_box(ifs, measure, 500_000)
+    approximate_stable_bounding_box(ifs, 10)
 
     ball = HyperBall(SVector(0.1, 0.1, 0.1), 1.91)
     box = hyper_box_from_corners([-1.0, -1.0, -1.0], [2.0, 2.0, 2.0])
