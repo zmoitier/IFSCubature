@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.19
+# v0.20.20
 
 using Markdown
 using InteractiveUtils
@@ -23,20 +23,6 @@ begin
     const FONTSIZE = 15
 
     "Global parameters"
-end
-
-# ╔═╡ d2aedcf8-321b-4747-812e-230d6117f9a6
-function plot_nb_refine(
-    sas::src.SelfAffineSet{3,T,9}, f0::src.Polyhedron{T}, nb_refine::Int, suffix::String=""
-) where {T}
-    fig = Figure()
-    ax = Axis(fig[1, 1]; aspect=1)
-
-    if SAVEPLOT
-        save("$(sas.name)$suffix.pdf", fig)
-    end
-
-    return fig
 end
 
 # ╔═╡ 12794fa9-f6a7-457b-a44b-a902d0db00aa
@@ -73,7 +59,11 @@ end
 
 # ╔═╡ 27c86a2c-e3af-4f66-8583-84302b042f40
 function plot_refine(
-    sas::src.SelfAffineSet{2,T,4}, f0::src.Polygon{T}, nb_refine::Int, suffix::String=""
+    sas::src.SelfAffineSet{2,T,4},
+    f0::src.Polygon{T},
+    nb_refine::Int,
+    α::Real,
+    suffix::String="",
 ) where {T}
     fig = Figure(; size=(600, 600), fontsize=FONTSIZE)
 
@@ -84,6 +74,9 @@ function plot_refine(
         ax_args[:ylabel] = L"y"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+
+    box = sas.bounding_box
+    poly!(ax, Point2f.(src.vertices(box))[[1, 2, 4, 3]]; color=(:black, α))
 
     fp = [f0.vertices]
     for _ in 1:nb_refine
@@ -109,13 +102,15 @@ plot_refine(
     src.sierpinski_triangle_fat(2),
     src.Polygon([[1.0, 0.0], [-0.5, √3 / 2], [-0.5, -√3 / 2]]),
     7,
+    0.1,
 )
 
 # ╔═╡ fb4ab529-02ef-433e-9e39-db9d6a552e3b
 plot_refine(
     src.koch_snowflake(),
     src.Polygon([[v for v in reverse(sincospi(2 * i//6))] for i in 0:5]),
-    4,
+    5,
+    0.1,
 )
 
 # ╔═╡ 29cc3ac3-765a-47dd-96dc-27748d56cb53
@@ -123,6 +118,7 @@ plot_refine(
     src.vicsek_2d(1 / 3),
     src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
     5,
+    0,
 )
 
 # ╔═╡ 40af0eed-5d64-4b59-8a28-e1893812acc0
@@ -130,6 +126,7 @@ plot_refine(
     src.vicsek_2d(1 / 3, 0.4),
     src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
     5,
+    0,
     "-0.4",
 )
 
@@ -138,6 +135,7 @@ plot_refine(
     src.vicsek_2d(1 / 3, π / 4),
     src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
     5,
+    0,
     "-pio4",
 )
 
@@ -146,18 +144,19 @@ plot_refine(
     src.cantor_dust(1 / 3, [-1.0, 1.0], 2),
     src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
     5,
+    0.05,
 )
 
 # ╔═╡ d901e89b-c7f7-4dac-b815-bf4665bf5beb
 begin
     local sas = src.cantor_dust_non_sym()
     local vs = src.fix_point.(sas.ifs)
-    plot_refine(sas, src.Polygon(vs), 5)
+    plot_refine(sas, src.Polygon(vs), 5, 0.05)
 end
 
 # ╔═╡ 61e6c900-e44e-4b26-ab7c-d45a6c06e355
 function plot_chaos_game(
-    sas::src.SelfAffineSet{2,Float64,4}, nb_pts::Int, suffix::String=""
+    sas::src.SelfAffineSet{2,Float64,4}, nb_pts::Int, α::Real, suffix::String=""
 )
     fig = Figure(; size=(600, 600), fontsize=FONTSIZE)
 
@@ -168,11 +167,15 @@ function plot_chaos_game(
         ax_args[:ylabel] = L"y"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+    ylims!(ax, (-0.5, 10.5))
 
     box = sas.bounding_box
     r = max(box.paxis[1, 1], box.paxis[2, 2])
     _min = box.center .- r
-    # _max = box.center .+ r
+    _max = box.center .+ r
+
+    box = sas.bounding_box
+    poly!(ax, Point2f.(src.vertices(box))[[1, 2, 4, 3]]; color=(:black, α))
 
     n = 512
     h = 2 * r / (n - 1)
@@ -198,8 +201,8 @@ function plot_chaos_game(
 
     heatmap!(
         ax,
-        (_min[1] .+ 0):((n - 1) .* h),
-        (_min[2] .+ 0):((n - 1) .* h),
+        range(_min[1], _max[1], n),
+        range(_min[2], _max[2], n),
         f;
         colormap=Reverse(:grays),
         colorrange=(0, 1),
@@ -213,7 +216,7 @@ function plot_chaos_game(
 end
 
 # ╔═╡ a2919f15-267d-4e1a-bfa3-cfeac7751a54
-plot_chaos_game(src.barnsley_fern(), 500_000)
+plot_chaos_game(src.barnsley_fern(), 500_000, 0.1)
 
 # ╔═╡ Cell order:
 # ╠═aa732af4-6dc3-11ef-1ec5-1fed1fee0ea5
@@ -227,7 +230,6 @@ plot_chaos_game(src.barnsley_fern(), 500_000)
 # ╠═0ca96d6b-e308-4237-aa4d-325f4bdb9bcd
 # ╠═b4f5039b-6f32-4d6f-ab93-7162d2989fbf
 # ╠═d901e89b-c7f7-4dac-b815-bf4665bf5beb
-# ╠═d2aedcf8-321b-4747-812e-230d6117f9a6
 # ╠═12794fa9-f6a7-457b-a44b-a902d0db00aa
 # ╠═27c86a2c-e3af-4f66-8583-84302b042f40
 # ╠═61e6c900-e44e-4b26-ab7c-d45a6c06e355
