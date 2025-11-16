@@ -18,8 +18,8 @@ end
 # ╔═╡ 4b9f2377-8ba9-4c77-adbe-5d4f0dad22f6
 begin
     #! Ploting constants
-    const ADDTITLE = true
-    const SAVEPLOT = false
+    const ADDTITLE = false
+    const SAVEPLOT = true
     const FONTSIZE = 15
 
     "Global parameters"
@@ -60,9 +60,10 @@ end
 # ╔═╡ 27c86a2c-e3af-4f66-8583-84302b042f40
 function plot_refine(
     sas::src.SelfAffineSet{2,T,4},
-    f0::src.Polygon{T},
-    nb_refine::Int,
-    α::Real,
+    f0::src.Polygon{T};
+    nb_refine::Int=1,
+    α::Real=0.5,
+    size::Tuple{Int,Int}=(600, 600),
     suffix::String="",
 ) where {T}
     box = sas.bounding_box
@@ -73,7 +74,7 @@ function plot_refine(
     a, b = _max - _min
     δ = 0.025 * norm(_max - _min)
 
-    fig = Figure(; size=(600, 600), fontsize=FONTSIZE)
+    fig = Figure(; size=size, fontsize=FONTSIZE, figure_padding=1)
 
     ax_args::Dict{Symbol,Any} = Dict(:aspect => a / b)
     if ADDTITLE
@@ -110,63 +111,64 @@ plot_refine(src.cantor_set(1 / 3, [0.0, 1.0]), src.Segment(0.0, 1.0), 4)
 # ╔═╡ e5da3ad5-0f2e-45f8-b79a-7fa765a924a2
 plot_refine(
     src.sierpinski_triangle_fat(2),
-    src.Polygon([[1.0, 0.0], [-0.5, √3 / 2], [-0.5, -√3 / 2]]),
-    7,
-    0.1,
-)
-
-# ╔═╡ fb4ab529-02ef-433e-9e39-db9d6a552e3b
-plot_refine(
-    src.koch_snowflake(),
-    src.Polygon([[v for v in reverse(sincospi(2 * i//6))] for i in 0:5]),
-    5,
-    0.1,
+    src.Polygon([[1.0, 0.0], [-0.5, √3 / 2], [-0.5, -√3 / 2]]);
+    nb_refine=7,
+    α=0.1,
+    size=(550, 600),
 )
 
 # ╔═╡ 29cc3ac3-765a-47dd-96dc-27748d56cb53
 plot_refine(
     src.vicsek_2d(1 / 3),
-    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
-    5,
-    0,
+    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]);
+    nb_refine=5,
+    α=0.05,
+    size=(625, 600),
 )
 
 # ╔═╡ 40af0eed-5d64-4b59-8a28-e1893812acc0
 plot_refine(
     src.vicsek_2d(1 / 3, 0.4),
-    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
-    5,
-    0,
-    "-0.4",
+    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]);
+    nb_refine=5,
+    α=0.05,
+    size=(625, 600),
+    suffix="-0.4",
 )
 
 # ╔═╡ 0ca96d6b-e308-4237-aa4d-325f4bdb9bcd
 plot_refine(
     src.vicsek_2d(1 / 3, π / 4),
-    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
-    5,
-    0,
-    "-pio4",
+    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]);
+    nb_refine=5,
+    α=0.05,
+    size=(625, 600),
+    suffix="-pio4",
 )
 
 # ╔═╡ b4f5039b-6f32-4d6f-ab93-7162d2989fbf
 plot_refine(
     src.cantor_dust(1 / 3, [-1.0, 1.0], 2),
-    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]),
-    5,
-    0.05,
+    src.Polygon([[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]]);
+    nb_refine=5,
+    α=0.05,
+    size=(625, 600),
 )
 
 # ╔═╡ d901e89b-c7f7-4dac-b815-bf4665bf5beb
 begin
     local sas = src.cantor_dust_non_sym()
     local vs = src.fix_point.(sas.ifs)
-    plot_refine(sas, src.Polygon(vs), 5, 0.05)
+    plot_refine(sas, src.Polygon(vs); nb_refine=5, α=0.05, size=(750, 600))
 end
 
 # ╔═╡ 61e6c900-e44e-4b26-ab7c-d45a6c06e355
 function plot_chaos_game(
-    sas::src.SelfAffineSet{2,Float64,4}, nb_pts::Int, α::Real, suffix::String=""
+    sas::src.SelfAffineSet{2,Float64,4};
+    nb_pts::Int=1_024,
+    α::Real=0.5,
+    size::Tuple{Int,Int}=(600, 600),
+    suffix::String="",
 )
     box = sas.bounding_box
     r = diag(box.paxis)
@@ -175,11 +177,10 @@ function plot_chaos_game(
 
     a, b = _max - _min
     δ = 0.025 * norm(_max - _min)
-    ab = a / b
 
-    fig = Figure(; size=(600, 600), fontsize=FONTSIZE)
+    fig = Figure(; size=size, fontsize=FONTSIZE, figure_padding=1)
 
-    ax_args::Dict{Symbol,Any} = Dict(:aspect => ab)
+    ax_args::Dict{Symbol,Any} = Dict(:aspect => a / b)
     if ADDTITLE
         ax_args[:title] = "$(sas.name)"
         ax_args[:xlabel] = L"x"
@@ -230,20 +231,30 @@ function plot_chaos_game(
     return fig
 end
 
+# ╔═╡ e61bb2e3-0a03-4732-ba8d-3845b5439768
+# plot_refine(
+#     src.koch_snowflake(),
+#     src.Polygon([[v for v in reverse(sincospi(2 * i//6))] for i in 0:5]),
+#     nb_refine=5,
+#     α=0.1,
+# 	size=(725,600),
+# )
+plot_chaos_game(src.koch_snowflake(); nb_pts=2_000_000, α=0.1, size=(725, 600))
+
 # ╔═╡ 3c4d8a45-2cc7-4f5c-b842-6ee6ae09da95
-plot_chaos_game(src.barnsley_fern(), 500_000, 0.1)
+plot_chaos_game(src.barnsley_fern(); nb_pts=2_000_000, α=0.1, size=(350, 600))
 
 # ╔═╡ Cell order:
 # ╠═aa732af4-6dc3-11ef-1ec5-1fed1fee0ea5
 # ╠═4b9f2377-8ba9-4c77-adbe-5d4f0dad22f6
 # ╠═8ee12a1c-a9b4-4ab5-8e2f-e75e1aafa544
 # ╠═e5da3ad5-0f2e-45f8-b79a-7fa765a924a2
-# ╠═fb4ab529-02ef-433e-9e39-db9d6a552e3b
 # ╠═29cc3ac3-765a-47dd-96dc-27748d56cb53
 # ╠═40af0eed-5d64-4b59-8a28-e1893812acc0
 # ╠═0ca96d6b-e308-4237-aa4d-325f4bdb9bcd
 # ╠═b4f5039b-6f32-4d6f-ab93-7162d2989fbf
 # ╠═d901e89b-c7f7-4dac-b815-bf4665bf5beb
+# ╠═e61bb2e3-0a03-4732-ba8d-3845b5439768
 # ╠═3c4d8a45-2cc7-4f5c-b842-6ee6ae09da95
 # ╠═12794fa9-f6a7-457b-a44b-a902d0db00aa
 # ╠═27c86a2c-e3af-4f66-8583-84302b042f40
