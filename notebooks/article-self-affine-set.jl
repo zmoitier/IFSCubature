@@ -51,7 +51,7 @@ function plot_refine(
     end
 
     if SAVEPLOT
-        save("$(sas.name)$suffix.pdf", fig)
+        save("$(sas.name)$suffix.png", fig)
     end
 
     return fig
@@ -99,7 +99,7 @@ function plot_refine(
     end
 
     if SAVEPLOT
-        save("$(sas.name)$suffix.pdf", fig)
+        save("$(sas.name)$suffix.png", fig)
     end
 
     return fig
