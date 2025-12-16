@@ -3,6 +3,10 @@ struct HyperBall{D,T}
     radius::T
 end
 
+function (f::AffineMap{D,T,N})(hb::HyperBall{D,T}) where {D,T,N}
+    return HyperBall{D,T}(f(hb.center), hb.radius * f.ρ)
+end
+
 function vertices(ball::HyperBall{1,T}) where {T}
     return [ball.center[1] - ball.radius, ball.center[1] + ball.radius]
 end
@@ -20,17 +24,17 @@ function hyper_ball(center::T, radius::T) where {T}
     return HyperBall{1,T}(SVector{1,T}(center), radius)
 end
 
-function (f::AffineMap{D,T,N})(hb::HyperBall{D,T}) where {D,T,N}
-    return HyperBall{D,T}(f(hb.center), hb.radius * f.ρ)
-end
-
 struct HyperBox{D,T,N}
     center::SVector{D,T}
     paxis::SMatrix{D,D,T,N}
 end
 
+function (f::AffineMap{D,T,N})(hb::HyperBox{D,T,N}) where {D,T,N}
+    return HyperBox{D,T,N}(f(hb.center), f.A * hb.paxis)
+end
+
 function vertices(box::HyperBox{D,T,N}) where {D,T,N}
-    pts = SVector{D,T}[]
+    pts = Vector{SVector{D,T}}()
     for p in product([[-1, 1] for _ in 1:D]...)
         push!(pts, box.center + box.paxis * SVector{D,T}(p))
     end
@@ -54,8 +58,16 @@ function hyper_box(center::T, half_width::T) where {T}
     return HyperBox{1,T,1}(SVector{1,T}(center), SMatrix{1,1,T,1}(half_width))
 end
 
-function (f::AffineMap{D,T,N})(hb::HyperBox{D,T,N}) where {D,T,N}
-    return HyperBox{D,T,N}(f(hb.center), f.A * hb.paxis)
+function hyper_box_from_corners(
+    corner_lower::AbstractVector{T}, corner_upper::AbstractVector{S}
+) where {T,S}
+    D = length(corner_lower)
+    @assert length(corner_upper) == D "lower and upper corner must have the same lenght"
+
+    N = D * D
+    center = (corner_upper + corner_lower) / 2
+    lengths = (corner_upper - corner_lower) / 2
+    return HyperBox{D,T,N}(SVector{D,T}(center), SMatrix{D,D,T,N}(Diagonal(lengths)))
 end
 
 struct Segment{T}

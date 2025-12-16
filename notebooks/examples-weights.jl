@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.20.21
 
 using Markdown
 using InteractiveUtils
@@ -10,7 +10,9 @@ begin
     Pkg.activate(Base.current_project())
     Pkg.instantiate()
 
-    using StaticArrays, CairoMakie
+    using CairoMakie
+    using LinearAlgebra
+    using StaticArrays
 
     import IFSCubature as src
 end
@@ -26,7 +28,9 @@ begin
 
     const MAXITER = 2048
 
-    const FONTSIZE = 20
+    const ADDTITLE = false
+    const SAVEPLOT = true
+    const FONTSIZE = 15
 
     "Global parameters"
 end
@@ -135,34 +139,58 @@ plot_weights_1d(; sas=src.cantor_set(1 / 3, [0.0, 1.0]), nb_pts_cbt=127, nb_refi
 
 # ╔═╡ 17239ef0-6170-4f11-99dd-d7cd63b49775
 function plot_weights_2d(;
-    sas::src.SelfAffineSet{2,T,4}, nb_pts_cbt::Int, nb_pts::Int
+    sas::src.SelfAffineSet{2,T,4},
+    nb_pts_cbt::Int,
+    nb_pts::Int,
+    size::Tuple{Int,Int}=(600, 600),
+    suffix::String="",
 ) where {T}
+    box = sas.bounding_box
+    r = diag(box.paxis)
+    _min = box.center .- r
+    _max = box.center .+ r
+
+    δ = 0.025 * norm(_max - _min)
+    a, b = _max .- _min .+ 2 .* δ
+
+    fig = Figure(; size=size, fontsize=FONTSIZE)
+
     cbt = src.compute_cubature(sas, POINTTYPE, nb_pts_cbt; maxiter=MAXITER)
     W = maximum(abs.(cbt.weights))
 
-    fig = Figure(; fontsize=FONTSIZE)
-
     M2 = nb_pts_cbt * nb_pts_cbt
-    ax = Axis(
-        fig[1, 1];
-        title=L"%$(clean_name(sas.name)) and $ M = %$M2 $",
-        xlabel=L"x",
-        ylabel=L"y",
-    )
+    ax_args::Dict{Symbol,Any} = Dict(:aspect => a / b)
+    if ADDTITLE
+        ax_args[:title] = L"%$(clean_name(sas.name)) and $ M = %$M2 $"
+        ax_args[:xlabel] = L"x"
+        ax_args[:ylabel] = L"p"
+    end
+    ax = Axis(fig[1, 1]; ax_args...)
+    xlims!(ax, _min[1] - δ, _max[1] + δ)
+    ylims!(ax, _min[2] - δ, _max[2] + δ)
 
     plot_chaos_game!(ax, sas, nb_pts)
 
     sc = scatter!(
         ax,
         cbt.points;
+        markersize=15,
         color=cbt.weights,
         colormap=:vik,
         colorrange=(-W, W),
         strokewidth=1,
-        strokecolor=:black,
+        strokecolor=(:black, 0.75),
     )
 
-    Colorbar(fig[1, 2], sc; label=L"w")
+    if ADDTITLE
+        Colorbar(fig[1, 2], sc; label=L"w")
+    else
+        Colorbar(fig[1, 2], sc)
+    end
+
+    if SAVEPLOT
+        save("$(sas.name)$suffix.png", fig)
+    end
 
     return fig
 end
@@ -171,10 +199,14 @@ end
 plot_weights_2d(; sas=src.cantor_dust(1 / 3, [-1.0, 1.0], 2), nb_pts_cbt=10, nb_pts=100_000)
 
 # ╔═╡ 6136f605-38fd-4046-95f3-a16400dc4d34
-plot_weights_2d(; sas=src.sierpinski_triangle(), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(;
+    sas=src.sierpinski_triangle(), nb_pts_cbt=10, nb_pts=100_000, size=(550, 512)
+)
 
 # ╔═╡ 3fbf1a9c-5554-4594-b260-98abd01f56db
-plot_weights_2d(; sas=src.sierpinski_triangle_fat(2), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(;
+    sas=src.sierpinski_triangle_fat(2), nb_pts_cbt=10, nb_pts=100_000, size=(550, 512)
+)
 
 # ╔═╡ 22fd1def-fb18-4910-b1c4-16fd54003e8a
 plot_weights_2d(; sas=src.vicsek_2d(1 / 3), nb_pts_cbt=10, nb_pts=100_000)
@@ -183,16 +215,20 @@ plot_weights_2d(; sas=src.vicsek_2d(1 / 3), nb_pts_cbt=10, nb_pts=100_000)
 plot_weights_2d(; sas=src.vicsek_2d(1 / 3, π / 4), nb_pts_cbt=10, nb_pts=100_000)
 
 # ╔═╡ bb4ee489-81aa-4ae8-af03-2685cec5219a
-plot_weights_2d(; sas=src.sierpinski_carpet(), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(; sas=src.sierpinski_carpet(), nb_pts_cbt=10, nb_pts=500_000)
 
 # ╔═╡ cc17ee44-9769-4c91-b08c-af138a4d29b7
-plot_weights_2d(; sas=src.koch_snowflake(), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(;
+    sas=src.koch_snowflake(), nb_pts_cbt=10, nb_pts=2_000_000, size=(700, 512)
+)
 
 # ╔═╡ c8d3184c-cac1-46e2-9f97-924aae266444
-plot_weights_2d(; sas=src.gosper_flowsnake(), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(;
+    sas=src.gosper_flowsnake(), nb_pts_cbt=10, nb_pts=2_000_000, size=(650, 512)
+)
 
 # ╔═╡ a35bb1c9-d044-46bb-806a-4434013881b1
-plot_weights_2d(; sas=src.durer_pentagon(), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(; sas=src.durer_pentagon(), nb_pts_cbt=10, nb_pts=500_000)
 
 # ╔═╡ 565d6e26-3926-46c4-a531-cf58fcd48d56
 plot_weights_2d(; sas=src.fudgeflake(), nb_pts_cbt=10, nb_pts=100_000)
@@ -210,13 +246,13 @@ plot_weights_2d(; sas=src.terdragon(), nb_pts_cbt=10, nb_pts=100_000)
 plot_weights_2d(; sas=src.twindragon(), nb_pts_cbt=10, nb_pts=100_000)
 
 # ╔═╡ d06989a2-d646-4019-a4d2-16e242c1b0ed
-plot_weights_2d(; sas=src.brick_2d(), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(; sas=src.brick_2d(), nb_pts_cbt=10, nb_pts=500_000)
 
 # ╔═╡ 14d64bca-e80a-4214-be64-08a6ae078241
 plot_weights_2d(; sas=src.cantor_dust_non_sym(), nb_pts_cbt=10, nb_pts=100_000)
 
 # ╔═╡ da548fdb-98eb-4f76-8d94-d7063d7d7f9c
-plot_weights_2d(; sas=src.barnsley_fern(), nb_pts_cbt=10, nb_pts=100_000)
+plot_weights_2d(; sas=src.barnsley_fern(), nb_pts_cbt=10, nb_pts=1_000_000, size=(400, 512))
 
 # ╔═╡ 55bc8777-4eae-4b63-829c-3aa24bb719e7
 function plot_sum(; sas::src.SelfAffineSet{D,T,N}, nb_pts_max::Int) where {D,T,N}

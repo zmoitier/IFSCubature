@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.20.21
 
 using Markdown
 using InteractiveUtils
@@ -230,14 +230,14 @@ end
 function vicsek_2d_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    ax_args = Dict(:xlabel => L"N", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for the 2d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+    limits!(ax, (0, 28), (1e-16, 10))
 
-    x_min, x_max = typemax(Int), 0
     for (s, m, leg) in [
         ("", :circle, L"\theta = 0"),
         ("-rot-0.4", :cross, L"\theta = 0.4"),
@@ -251,14 +251,15 @@ function vicsek_2d_pv()
         val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
 
         scatterlines!(
-            ax, nb_pts, relative_error.(val, val_ref); marker=m, linestyle=:dash, label=leg
+            ax,
+            sqrt.(nb_pts) .- 1,
+            relative_error.(val, val_ref);
+            marker=m,
+            linestyle=:dash,
+            label=leg,
         )
-
-        x_min = min(x_min, nb_pts[1])
-        x_max = max(x_max, nb_pts[end])
     end
 
-    limits!(ax, (x_min / 1.1, x_max * 1.1), (1e-16, 10))
     axislegend(ax; position=:lb)
 
     if SAVEPLOT
@@ -281,12 +282,13 @@ function vicsek_2d_hv()
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+    limits!(ax, (1e-2, 3.5), (1e-16, 10))
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 3e-4), (3, 5e-9), (5, 5e-14)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -315,7 +317,6 @@ function vicsek_2d_hv()
         end
     end
 
-    limits!(ax, (1e-2, 3.5), (1e-16, 10))
     axislegend(ax; position=:rb, backgroundcolor=(:white, 0))
 
     if SAVEPLOT
@@ -332,12 +333,13 @@ vicsek_2d_hv()
 function other_example_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    ax_args = Dict(:xlabel => L"N", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+    limits!(ax, (0, 28), (1e-16, 10))
 
     for (i, (name, mk, leg)) in enumerate([
         ("2d-sierpinski-triangle-fat", :circle, "fat Sierpinski tri."),
@@ -353,7 +355,7 @@ function other_example_pv()
 
         scatterlines!(
             ax,
-            nb_pts,
+            sqrt.(nb_pts) .- 1,
             relative_error.(val, val_ref);
             color=i,
             colormap=:tab10,
@@ -364,7 +366,6 @@ function other_example_pv()
         )
     end
 
-    limits!(ax, (0, 800), (1e-16, 10))
     axislegend(ax; position=:rt, backgroundcolor=(:white, 0))
 
     if SAVEPLOT
@@ -390,9 +391,9 @@ function other_example_hv()
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 2e-3), (3, 3e-8), (5, 5e-13)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -441,12 +442,13 @@ other_example_hv()
 function vicsek_3d_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    ax_args = Dict(:xlabel => L"N", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for the 3d Vicsek"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+    limits!(ax, (0, 15), (1e-16, 10))
 
     data = TOML.parsefile("../data-convergences/3d-vicsek-rot.toml")
 
@@ -456,10 +458,12 @@ function vicsek_3d_pv()
     val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
 
     scatterlines!(
-        ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
+        ax,
+        cbrt.(nb_pts) .- 1,
+        relative_error.(val, val_ref);
+        marker=:xcross,
+        linestyle=:dash,
     )
-
-    limits!(ax, (0, 3500), (1e-16, 10))
 
     if SAVEPLOT
         save("3d-vicsek-rot-pv.pdf", fig)
@@ -484,9 +488,9 @@ function vicsek_3d_hv()
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 2e-4), (3, 1e-8), (5, 3e-13)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -529,12 +533,13 @@ vicsek_3d_hv()
 function barnsley_fern_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    ax_args = Dict(:xlabel => L"N", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for the Barnsley fern"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
+    limits!(ax, (0, 28), (1e-3, 20))
 
     data = TOML.parsefile("../data-convergences/2d-barnsley-fern.toml")
 
@@ -544,10 +549,12 @@ function barnsley_fern_pv()
     val = data["p-version"]["values-real"] .+ im .* data["p-version"]["values-imag"]
 
     scatterlines!(
-        ax, nb_pts, relative_error.(val, val_ref); marker=:xcross, linestyle=:dash
+        ax,
+        sqrt.(nb_pts) .- 1,
+        relative_error.(val, val_ref);
+        marker=:xcross,
+        linestyle=:dash,
     )
-
-    limits!(ax, (0, 800), (1e-3, 20))
 
     if SAVEPLOT
         save("2d-barnsley-fern-pv.pdf", fig)
@@ -571,10 +578,10 @@ function barnsley_fern_hv()
     ax = Axis(fig[1, 1]; ax_args...)
 
     h = [1e-1, 4e-1]
-    for (k, y) in [(1, 1e-2), (3, 5e-6), (5, 2e-9)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
+    for (k, y) in [(1, 8e-3), (3, 5e-7), (5, 1e-10)]
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 
@@ -600,7 +607,7 @@ function barnsley_fern_hv()
         )
     end
 
-    limits!(ax, (8e-2, 15), (1e-10, 20))
+    limits!(ax, (8e-2, 15), (1e-12, 20))
     axislegend(ax; position=:rb)
 
     if SAVEPLOT
@@ -617,21 +624,13 @@ barnsley_fern_hv()
 function cantor_dust_sing_pv()
     fig = Figure(; fontsize=FONTSIZE)
 
-    ax_args = Dict(:xlabel => L"M", :yscale => log10)
+    ax_args = Dict(:xlabel => L"N", :yscale => log10)
     if ADDTITLE
         ax_args[:title] = L"$p$-version convergence for Cantor dust"
         ax_args[:ylabel] = L"Relative error$$"
     end
     ax = Axis(fig[1, 1]; ax_args...)
-
-    x = range(0, 800, 128)
-    lines!(
-        ax,
-        x,
-        exp.(-1.3 .* .√x);
-        color=:black,
-        label=L"\mathcal{O}(\mathrm{e}^{- \mathcal{O}(\sqrt{M})})",
-    )
+    limits!(ax, (0, 28), (1e-16, 10))
 
     for (x, c, mk) in [
         (-2.0, 1, :circle),
@@ -650,7 +649,7 @@ function cantor_dust_sing_pv()
 
         scatterlines!(
             ax,
-            nb_pts,
+            sqrt.(nb_pts) .- 1,
             relative_error.(val, val_ref);
             color=c,
             colormap=:tab10,
@@ -661,7 +660,6 @@ function cantor_dust_sing_pv()
         )
     end
 
-    limits!(ax, (0, 800), (1e-16, 10))
     axislegend(ax; position=:lb)
 
     if SAVEPLOT
@@ -687,9 +685,9 @@ function cantor_dust_sing_hv()
 
     h = [2.5e-2, 1.5e-1]
     for (k, y) in [(1, 4e-4), (3, 8e-8), (5, 3e-12)]
-        w = y .* (h ./ h[1]) .^ (k + 1)
-        lines!(ax, h, w; color=:black)
         p = k + 1
+        w = y .* (h ./ h[1]) .^ p
+        lines!(ax, h, w; color=:black)
         text!(ax, √prod(h), √prod(w) * 2; text=L"h^%$p")
     end
 

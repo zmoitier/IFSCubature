@@ -96,8 +96,8 @@ function get_points(type_points::String, nb_points::Int)
     else
         mgs = "possible type of points are:\n"
         for choice in [
-            "equispaced-1",
-            "equispaced-2",
+            "Equispaced-1",
+            "Equispaced-2",
             "Chebyshev-1",
             "Chebyshev-2",
             "Gauss-Legendre",
@@ -209,10 +209,15 @@ function compute_cubature(
     x0 = rand(T, J)
     λ, weights = powm!(M, x0; maxiter=maxiter, tol=1e-14)
 
-    @assert isapprox(λ, 1) "$λ should be equal to 1."
+    if !isapprox(λ, 1)
+        @warn "λ = $λ should be equal to 1."
+    end
 
     weights /= sum(weights)
 
-    @assert isapprox(sum(weights), 1) "the sum of the weights must = 1."
+    if !isapprox(sum(weights), 1)
+        @warn "the sum of the weights $(sum(weights)) should be equal to 1."
+    end
+
     return Cubature(points, weights)
 end

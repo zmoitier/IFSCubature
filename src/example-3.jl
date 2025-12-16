@@ -21,11 +21,14 @@ function sierpinski_tetrahedron(contraction_factor::Union{Float64,Nothing}=nothi
         contractive_similarity(ρ, c) for
         c in [[1, 0, -√2 / 2], [-1, 0, -√2 / 2], [0, 1, √2 / 2], [0, -1, √2 / 2]]
     ]
+    measure = fill(1 / 4, 4)
 
-    ball = hyper_ball(fill(0.0, 3), √(3 / 2))
-    box = hyper_box(fill(0.0, 3), Matrix(Diagonal([1.0, 1.0, √2 / 2])))
+    ball = HyperBall(SVector(0.0, 0.0, 0.0), √(3 / 2))
+    box = HyperBox(
+        SVector(0.0, 0.0, 0.0), SMatrix{3,3}(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, √2 / 2)
+    )
 
-    return SelfAffineSet(ifs, fill(1 / 4, 4), ball, box, "3d-sierpinski-tetrahedron")
+    return SelfAffineSet(ifs, measure, ball, box, "3d-sierpinski-tetrahedron")
 end
 
 """Return Menger sponge."""
@@ -58,8 +61,8 @@ function menger_sponge()
 
     ifs = [contractive_similarity(ρ, c) for c in fix_points]
 
-    ball = hyper_ball(fill(0.0, 3), √3)
-    box = hyper_box(fill(0.0, 3), Matrix(Diagonal(fill(1.0, 3))))
+    ball = HyperBall(SVector(0.0, 0.0, 0.0), √3)
+    box = HyperBox(SVector(0.0, 0.0, 0.0), SMatrix{3,3,Float64}(I))
 
     return SelfAffineSet(ifs, fill(1 / 20, 20), ball, box, "3d-menger-sponge")
 end
@@ -84,8 +87,8 @@ function vicsek_3d(contraction_factor::Float64, central_rotation::Bool=false)
         push!(ifs, contractive_similarity(contraction_factor, [v for v in c]))
     end
 
-    ball = hyper_ball(fill(0.0, 3), √3)
-    box = hyper_box(fill(0.0, 3), Matrix(Diagonal(fill(1.0, 3))))
+    ball = HyperBall(SVector(0.0, 0.0, 0.0), √3)
+    box = HyperBox(SVector(0.0, 0.0, 0.0), SMatrix{3,3,Float}(I))
 
     return SelfAffineSet(ifs, fill(1 / 9, 9), ball, box, name)
 end
@@ -127,9 +130,10 @@ function brick_3d()
             [0, 0, 2],
         ]
     ]
+    measure = fill(1 / 27, 27)
 
-    ball = bounding_ball(ifs)
-    box = bounding_box(ifs)
+    ball = HyperBall(SVector(0.1, 0.1, 0.1), 1.91)
+    box = hyper_box_from_corners([-1.0, -1.0, -1.0], [2.0, 2.0, 2.0])
 
-    return SelfAffineSet(ifs, fill(1 / 27, 27), ball, box, "3d-brick")
+    return SelfAffineSet(ifs, measure, ball, box, "3d-brick")
 end
